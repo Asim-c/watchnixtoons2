@@ -2,18 +2,26 @@
 import re
 import sys
 import requests
-import json #added by Christian Haitian
+import six
 import os #added by Christian Haitian
-import cPickle as pickle #added by Christian Haitian
-import datetime #added by Christian Haitian
-from urlparse import urlparse, urljoin #added by Christian Haitian
 
+try:  #added by Christian Haitian
+  import cPickle as pickle  #added by Christian Haitian
+except:  #added by Christian Haitian
+  import pickle   #added by Christian Haitian
+
+import datetime #added by Christian Haitian
 from itertools import chain
 from base64 import b64decode
 from time import time, sleep
-from urlparse import parse_qsl
+from six.moves import urllib_parse
+
+try:
+  from urllib.parse import urlparse, urljoin
+except:
+  from urlparse import urlparse, urljoin
+
 from string import ascii_uppercase
-from urllib import quote_plus, urlencode
 from os import sep as osSeparator #added by Christian Haitian
 
 import xbmc
@@ -175,7 +183,7 @@ def actionCatalogMenu(params):
                 THUMBS_BASEURL = 'https://doko-desuka.github.io/128h/'
                 artDict = {'thumb': None, 'fanart': ADDON_FANART}
                 miscItem = None
-                for sectionName in sorted(catalog.iterkeys()):
+                for sectionName in sorted(catalog.keys()):
                     if catalog[sectionName]:
                         item = xbmcgui.ListItem(sectionName)
                         # Correct the address for the '#' (miscellaneous, non-letter) category.
@@ -196,7 +204,7 @@ def actionCatalogMenu(params):
                         xbmcgui.ListItem(sectionName),
                         True
                     )
-                    for sectionName in sorted(catalog.iterkeys()) if len(catalog[sectionName])
+                    for sectionName in sorted(catalog.keys()) if len(catalog[sectionName])
                 ]
             # See if an "All" folder is necessary (when there's more than one folder in the catalog).
             if len(items) > 1:
@@ -418,7 +426,7 @@ def actionLatestMoviesMenu(params):
                         entryPlot,
                         isFolder = False,
                         isSpecial = True,
-                        oldParams = None
+                        oldParams = params
                     ),
                     False
                 )
@@ -898,14 +906,16 @@ def actionShowInfo(params):
         infoItems = getWindowProperty(PROPERTY_INFO_ITEMS) or { }
         infoItems[url] = (plot, (thumb or 'DefaultVideo.png'))
         setWindowProperty(PROPERTY_INFO_ITEMS, infoItems)
-        oldParams = dict(parse_qsl(params['oldParams']))
+        oldParams = dict(urllib_parse.parse_qsl(params['oldParams']))
         xbmc.executebuiltin('Container.Update(%s,replace)' % (PLUGIN_URL + '?' + params['oldParams']))
     else:
         xbmcgui.Dialog().notification('WatchNixtoons2', 'No info found', ADDON_ICON, 1500, False)
 
 
 def unescapeHTMLText(text):
-    text = text.encode('utf-8') if isinstance(text, unicode) else unicode(text, errors='ignore').encode('utf-8')
+    # text = text.encode('utf-8') if isinstance(text, unicode) else unicode(text, errors='ignore').encode('utf-8')
+    if isinstance(text, six.text_type) and six.PY2:
+        text = text.encode('utf-8')
     # Unescape HTML entities.
     if r'&#' in text:
         # Strings found by regex-searching on all lists in the source website. It's very likely to only be these.
@@ -946,8 +956,8 @@ def getTitleInfo(unescapedTitle):
         spaceIndex = unescapedTitle.find(' ', episodeIndex+9)
         if spaceIndex > episodeIndex:
             episodeSplit = unescapedTitle[episodeIndex+9 : spaceIndex].split('-') # For multipart episodes, like "42-43".
-            episode = filter(str.isdigit, episodeSplit[0])
-            multiPart = filter(str.isdigit, episodeSplit[1]) if len(episodeSplit) > 1 else None
+            episode = ''.join(filter(str.isdigit, episodeSplit[0]))
+            multiPart = ''.join(filter(str.isdigit, episodeSplit[1])) if len(episodeSplit) > 1 else None
 
             # Get the episode title string (stripped of spaces, hyphens and en-dashes).
             englishIndex = unescapedTitle.rfind(' English', spaceIndex)
@@ -981,6 +991,10 @@ def makeListItem(title, url, artDict, plot, isFolder, isSpecial, oldParams):
         itemInfo = {
             'mediatype': 'episode' if episode else 'tvshow', 'tvshowtitle': title, 'title': episodeTitle, 'plot': plot
         }
+
+        if six.PY3:
+            episode = str(episode)
+
         if episode and episode.isdigit():
             itemInfo['season'] = int(season) if season.isdigit() else -1
             itemInfo['episode'] = int(episode)
@@ -1000,14 +1014,14 @@ def makeListItem(title, url, artDict, plot, isFolder, isSpecial, oldParams):
         contextMenuList = [
             (
                 'Nixtoons Information',
-                'RunPlugin('+PLUGIN_URL+'?action=actionShowInfo&url='+quote_plus(url)+'&oldParams='+quote_plus(urlencode(oldParams))+')'
+                'RunPlugin('+PLUGIN_URL+'?action=actionShowInfo&url='+urllib_parse.quote_plus(url)+'&oldParams='+urllib_parse.quote_plus(urllib_parse.urlencode(oldParams))+')'
             )
         ]
     if isPlayable:
         item.setProperty('IsPlayable', 'true') # Allows the checkmark to be placed on watched episodes.
         playChaptersItem = (
             'Play Chapters',
-            'PlayMedia('+PLUGIN_URL+'?action=actionResolve&url='+quote_plus(url)+'&playChapters=1)'
+            'PlayMedia('+PLUGIN_URL+'?action=actionResolve&url='+urllib_parse.quote_plus(url)+'&playChapters=1)'
         )
         if contextMenuList:
             contextMenuList.append(playChaptersItem)
@@ -1060,14 +1074,14 @@ def makeListItemClean(title, url, artDict, plot, isFolder, isSpecial, oldParams)
         contextMenuList = [
             (
                 'Show Information',
-                'RunPlugin('+PLUGIN_URL+'?action=actionShowInfo&url='+quote_plus(url)+'&oldParams='+quote_plus(urlencode(oldParams))+')'
+                'RunPlugin('+PLUGIN_URL+'?action=actionShowInfo&url='+urllib_parse.quote_plus(url)+'&oldParams='+urllib_parse.quote_plus(urllib_parse.urlencode(oldParams))+')'
             )
         ]
     if isPlayable:
         item.setProperty('IsPlayable', 'true') # Allows the checkmark to be placed on watched episodes.
         playChaptersItem = (
             'Play Chapters',
-            'PlayMedia('+PLUGIN_URL+'?action=actionResolve&url='+quote_plus(url)+'&playChapters=1)'
+            'PlayMedia('+PLUGIN_URL+'?action=actionResolve&url='+urllib_parse.quote_plus(url)+'&playChapters=1)'
         )
         if contextMenuList:
             contextMenuList.append(playChaptersItem)
@@ -1283,7 +1297,12 @@ def actionResolve(params):
     r = requestHelper(url.replace('watchcartoononline.io', 'user.wco.tv', 1)) # New domain safety.
     content = r.content
 
+    if six.PY3:
+        content = str(content)
+
     def _decodeSource(subContent):
+        if six.PY3:
+            subContent = str(subContent)
         # All links in premium site seem to start with file, we'll search for those in the content
         demlinks = re.findall(r" src: '(.*?)'",str(subContent))
 
@@ -1297,7 +1316,11 @@ def actionResolve(params):
 
     embedURL = None
 
-    embedURLPattern = b'onclick="myFunction'
+    if six.PY3:
+        embedURLPattern = b'onclick="myFunction'.decode('utf-8')
+    else:
+        embedURLPattern = b'onclick="myFunction'
+
     embedURLIndex = content.find(embedURLPattern)
     if 'playChapters' in params or ADDON.getSetting('chapterEpisodes') == 'true':
         # Multi-chapter episode found (that is, multiple embedURLPattern statements found).
@@ -1351,17 +1374,17 @@ def actionResolve(params):
                 selectedIndex = xbmcgui.Dialog().select(
                     'Select Quality', ['SD', 'HD']
                 )
-                if selectedIndex == 0:
-                    mediaURL = premiumlinks[0] if premiumlinks0 == 'Response [200]' and re.search(r'.720p.',str(premiumlinks[0])) == None else premiumlinks[1]
+                if selectedIndex == 1:
+                    mediaURL = premiumlinks[0] if premiumlinks0 == 'Response [200]' else premiumlinks[1]
                 elif selectedIndex == -1:
                     mediaURL = None
                 else:
-                    mediaURL = premiumlinks[1] if premiumlinks1 == 'Response [200]' and re.search(r'.720p.',str(premiumlinks[1])) != None else premiumlinks[0]
+                    mediaURL = premiumlinks[1] if premiumlinks1 == 'Response [200]' else premiumlinks[0]
         else: # Auto-play user choice.
-            if playbackMethod == '1':
-             mediaURL = premiumlinks[1] if str(premiumlinks1) == '<Response [200]>' and re.search(r'.720p.',str(premiumlinks[1])) != None else premiumlinks[0]
+            if playbackMethod == '0':
+             mediaURL = premiumlinks[1] if str(premiumlinks1) == '<Response [200]>' else premiumlinks[0]
             else:
-             mediaURL = premiumlinks[0] if str(premiumlinks0) == '<Response [200]>' and re.search(r'.720p.',str(premiumlinks[0])) == None else premiumlinks[1]
+             mediaURL = premiumlinks[0] if str(premiumlinks0) == '<Response [200]>' else premiumlinks[1]
 
     else: #Check free site in case of a new release that's not on the premium site yet.
      xbmcgui.Dialog().notification('Trying free stream', '')
@@ -1369,11 +1392,13 @@ def actionResolve(params):
      content = r.content
 
      def _decodeSource(subContent):
+        if six.PY3:
+            subContent = str(subContent)
         chars = subContent[subContent.find('[') : subContent.find(']')]
         spread = int(re.search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
         iframe = ''.join(
             chr(
-                int(''.join(c for c in b64decode(char) if c.isdigit())) - spread
+                int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
             )
             for char in chars.replace('"', '').split(',')
         )
@@ -1432,7 +1457,7 @@ def actionResolve(params):
      # Find the stream URLs.
      if 'getvid?evid' in html:
         # Query-style stream getting.
-        sourceURL = re.search(b'"(/inc/embed/getvidlink[^"]+)', html, re.DOTALL).group(1)
+        sourceURL = re.search(r'"(/inc/embed/getvidlink[^"]+)', html, re.DOTALL).group(1)
 
         # Inline code similar to 'requestHelper()'.
         # The User-Agent for this next request is somehow encoded into the media tokens, so we make sure to use
@@ -1512,7 +1537,7 @@ def actionResolve(params):
         # Need to use the exact same ListItem name & infolabels when playing or else Kodi replaces that item
         # in the UI listing.
         item = xbmcgui.ListItem(xbmc.getInfoLabel('ListItem.Label'))
-        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+quote_plus(val) for key, val in MEDIA_HEADERS.iteritems()))
+        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+urllib_parse.quote_plus(val) for key, val in MEDIA_HEADERS.items()))
         item.setMimeType(mediaHead.headers.get('Content-Type', 'video/mp4')) # Avoids Kodi's MIME request.
 
         # When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
@@ -1520,7 +1545,10 @@ def actionResolve(params):
         if not itemTitle:
             match = re.search(b'<h1[^>]+>([^<]+)</h1', content)
             if match:
-                itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+                if six.PY3:
+                    itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+                else:
+                    itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
             else:
                 itemTitle = ''
 
@@ -1569,14 +1597,17 @@ def actionResolve(params):
 				}
         mediaHead = solveMediaRedirect(mediaURL, MEDIA_HEADERS)
         item = xbmcgui.ListItem(xbmc.getInfoLabel('ListItem.Label'))
-        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+quote_plus(val) for key, val in MEDIA_HEADERS.iteritems()))
+        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+urllib_parse.quote_plus(val) for key, val in MEDIA_HEADERS.items()))
         item.setMimeType(mediaHead.headers.get('Content-Type', 'video/mp4')) # Avoids Kodi's MIME request.
 			# When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
         itemTitle = xbmc.getInfoLabel('ListItem.Title')
         if not itemTitle:
                 match = re.search(b'<h1[^>]+>([^<]+)</h1', content)
                 if match:
-                    itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+                    if six.PY3:
+                        itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+                    else:
+                        itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
                 else:
                     itemTitle = ''
 
@@ -1610,11 +1641,13 @@ def actionResolve(params):
      content = r.content
 
      def _decodeSource(subContent):
+        if six.PY3:
+            subContent = str(subContent)
         chars = subContent[subContent.find('[') : subContent.find(']')]
         spread = int(re.search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
         iframe = ''.join(
             chr(
-                int(''.join(c for c in b64decode(char) if c.isdigit())) - spread
+                int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
             )
             for char in chars.replace('"', '').split(',')
         )
@@ -1673,7 +1706,7 @@ def actionResolve(params):
      # Find the stream URLs.
      if 'getvid?evid' in html:
         # Query-style stream getting.
-        sourceURL = re.search(b'"(/inc/embed/getvidlink[^"]+)', html, re.DOTALL).group(1)
+        sourceURL = re.search(r'"(/inc/embed/getvidlink[^"]+)', html, re.DOTALL).group(1)
 
         # Inline code similar to 'requestHelper()'.
         # The User-Agent for this next request is somehow encoded into the media tokens, so we make sure to use
@@ -1732,7 +1765,7 @@ def actionResolve(params):
 
      if mediaURL:
         # Kodi headers for playing web streamed media.
-        global MEDIA_HEADERS
+        # global MEDIA_HEADERS
         if not MEDIA_HEADERS:
             MEDIA_HEADERS = {
                 'User-Agent': WNT2_USER_AGENT,
@@ -1753,7 +1786,7 @@ def actionResolve(params):
         # Need to use the exact same ListItem name & infolabels when playing or else Kodi replaces that item
         # in the UI listing.
         item = xbmcgui.ListItem(xbmc.getInfoLabel('ListItem.Label'))
-        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+quote_plus(val) for key, val in MEDIA_HEADERS.iteritems()))
+        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+urllib_parse.quote_plus(val) for key, val in MEDIA_HEADERS.items()))
         item.setMimeType(mediaHead.headers.get('Content-Type', 'video/mp4')) # Avoids Kodi's MIME request.
 
         # When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
@@ -1761,7 +1794,10 @@ def actionResolve(params):
         if not itemTitle:
             match = re.search(b'<h1[^>]+>([^<]+)</h1', content)
             if match:
-                itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+              if six.PY3:
+                  itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+              else:
+                  itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
             else:
                 itemTitle = ''
 
@@ -1804,11 +1840,13 @@ def actionResolve(params):
     content = r.content
 
     def _decodeSource(subContent):
+        if six.PY3:
+            subContent = str(subContent)
         chars = subContent[subContent.find('[') : subContent.find(']')]
         spread = int(re.search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
         iframe = ''.join(
             chr(
-                int(''.join(c for c in b64decode(char) if c.isdigit())) - spread
+                int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
             )
             for char in chars.replace('"', '').split(',')
         )
@@ -1867,7 +1905,7 @@ def actionResolve(params):
     # Find the stream URLs.
     if 'getvid?evid' in html:
         # Query-style stream getting.
-        sourceURL = re.search(b'"(/inc/embed/getvidlink[^"]+)', html, re.DOTALL).group(1)
+        sourceURL = re.search(r'"(/inc/embed/getvidlink[^"]+)', html, re.DOTALL).group(1)
 
         # Inline code similar to 'requestHelper()'.
         # The User-Agent for this next request is somehow encoded into the media tokens, so we make sure to use
@@ -1925,7 +1963,7 @@ def actionResolve(params):
 
     if mediaURL:
         # Kodi headers for playing web streamed media.
-        global MEDIA_HEADERS
+        # global MEDIA_HEADERS
         if not MEDIA_HEADERS:
             MEDIA_HEADERS = {
                 'User-Agent': WNT2_USER_AGENT,
@@ -1946,7 +1984,7 @@ def actionResolve(params):
         # Need to use the exact same ListItem name & infolabels when playing or else Kodi replaces that item
         # in the UI listing.
         item = xbmcgui.ListItem(xbmc.getInfoLabel('ListItem.Label'))
-        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+quote_plus(val) for key, val in MEDIA_HEADERS.iteritems()))
+        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+urllib_parse.quote_plus(val) for key, val in MEDIA_HEADERS.items()))
         item.setMimeType(mediaHead.headers.get('Content-Type', 'video/mp4')) # Avoids Kodi's MIME request.
 
         # When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
@@ -1954,7 +1992,10 @@ def actionResolve(params):
         if not itemTitle:
             match = re.search(b'<h1[^>]+>([^<]+)</h1', content)
             if match:
-                itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+                if six.PY3:
+                    itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+                else:
+                    itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
             else:
                 itemTitle = ''
 
@@ -1992,9 +2033,9 @@ def buildURL(query):
     :param query: Dictionary of url parameters to put in the URL.
     :returns: A formatted and urlencoded URL string.
     '''
-    return (PLUGIN_URL + '?' + urlencode({k: v.encode('utf-8') if isinstance(v, unicode)
+    return (PLUGIN_URL + '?' + urllib_parse.urlencode({k: v.encode('utf-8') if isinstance(v, six.text_type)
                                          else unicode(v, errors='ignore').encode('utf-8')
-                                         for k, v in query.iteritems()}))
+                                         for k, v in query.items()}))
 
 
 def setViewMode():
@@ -2021,7 +2062,7 @@ def getThumbnailHeaders():
     #    + '&Referer='+quote_plus(BASEURL+'/')
     #)
     cookieProperty = getRawWindowProperty(PROPERTY_SESSION_COOKIE)
-    cookies = ('&Cookie=' + quote_plus(cookieProperty)) if cookieProperty else ''
+    cookies = ('&Cookie=' + urllib_parse.quote_plus(cookieProperty)) if cookieProperty else ''
 
     # Since it's a constant value, it can be precomputed.
     return '|User-Agent=Mozilla%2F5.0+%28compatible%3B+WatchNixtoons2%2F0.4.1%3B' \
@@ -2041,7 +2082,9 @@ def solveMediaRedirect(url, headers):
     # Returns the final stream HEAD response.
     while True:
         try:
-            mediaHead = simpleRequest(url, requests.head, headers)
+            mediaHead = requests.get(
+                url, stream=True, headers=headers, allow_redirects=False, verify=False, timeout=10
+            )
             if 'Location' in mediaHead.headers:
                 url = mediaHead.headers['Location'] # Change the URL to the redirected location.
             else:
@@ -2090,7 +2133,7 @@ def requestHelper(url, data=None, extraHeaders=None):
     # Store the session cookie(s), if any.
     if not cookieProperty and response.cookies:
         setRawWindowProperty(
-            PROPERTY_SESSION_COOKIE, '; '.join(pair[0]+'='+pair[1] for pair in response.cookies.get_dict().iteritems())
+            PROPERTY_SESSION_COOKIE, '; '.join(pair[0]+'='+pair[1] for pair in response.cookies.get_dict().items())
         )
 
     elapsed = time() - startTime
@@ -2131,5 +2174,5 @@ def main():
     Main add-on routing function, calls a certain action (function).
     The 'action' parameter is the direct name of the function.
     '''
-    params = dict(parse_qsl(sys.argv[2][1:], keep_blank_values=True))
+    params = dict(urllib_parse.parse_qsl(sys.argv[2][1:], keep_blank_values=True))
     globals()[params.get('action', 'actionMenu')](params) # Defaults to 'actionMenu()'.
