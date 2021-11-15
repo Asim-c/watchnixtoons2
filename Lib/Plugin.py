@@ -28,6 +28,8 @@ import xbmc
 import xbmcgui
 import xbmcaddon
 import xbmcplugin
+if six.PY3:
+  xrange=range
 
 from Lib.Common import *
 from Lib.SimpleTrakt import SimpleTrakt
