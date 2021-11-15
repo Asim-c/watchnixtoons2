@@ -1542,7 +1542,11 @@ def actionResolve(params):
         # When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
         itemTitle = xbmc.getInfoLabel('ListItem.Title')
         if not itemTitle:
-            match = search(b'<h1[^>]+>([^<]+)</h1', content)
+            if six.PY3:
+                match = search(b'<h1[^>]+>([^<]+)</h1'.decode('utf-8'), content)
+            else:
+                match = search(b'<h1[^>]+>([^<]+)</h1', content)
+
             if match:
                 if six.PY3:
                     itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
@@ -1601,14 +1605,18 @@ def actionResolve(params):
 			# When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
         itemTitle = xbmc.getInfoLabel('ListItem.Title')
         if not itemTitle:
+            if six.PY3:
+                match = search(b'<h1[^>]+>([^<]+)</h1'.decode('utf-8'), content)
+            else:
                 match = search(b'<h1[^>]+>([^<]+)</h1', content)
-                if match:
-                    if six.PY3:
-                        itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
-                    else:
-                        itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+                
+            if match:
+                if six.PY3:
+                    itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
                 else:
-                    itemTitle = ''
+                    itemTitle = match.group(1).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
+            else:
+                itemTitle = ''
 
         episodeString = xbmc.getInfoLabel('ListItem.Episode')
         if episodeString != '' and episodeString != '-1':
@@ -1791,7 +1799,11 @@ def actionResolve(params):
         # When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
         itemTitle = xbmc.getInfoLabel('ListItem.Title')
         if not itemTitle:
-            match = search(b'<h1[^>]+>([^<]+)</h1', content)
+            if six.PY3:
+                match = search(b'<h1[^>]+>([^<]+)</h1'.decode('utf-8'), content)
+            else:
+                match = search(b'<h1[^>]+>([^<]+)</h1', content)
+
             if match:
               if six.PY3:
                   itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
@@ -1989,7 +2001,11 @@ def actionResolve(params):
         # When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
         itemTitle = xbmc.getInfoLabel('ListItem.Title')
         if not itemTitle:
-            match = search(b'<h1[^>]+>([^<]+)</h1', content)
+            if six.PY3:
+                match = search(b'<h1[^>]+>([^<]+)</h1'.decode('utf-8'), content)
+            else:
+                match = search(b'<h1[^>]+>([^<]+)</h1', content)
+
             if match:
                 if six.PY3:
                     itemTitle = str(match.group(1)).replace(' English Subbed', '', 1).replace( 'English Dubbed', '', 1)
