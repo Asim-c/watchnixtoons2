@@ -147,7 +147,7 @@ ADDON_ICON_DICT = {'icon': ADDON_ICON, 'thumb': ADDON_ICON, 'poster': ADDON_ICON
 ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2/resources/traktIcon.png'
 
 # To let the source website know it's this plugin. Also used inside "makeLatestCatalog()" and "actionResolve()".
-WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36'
+WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36'
 
 MEDIA_HEADERS = None # Initialized in 'actionResolve()'.
 
@@ -775,7 +775,7 @@ def actionRestoreDatabase(params):
 
     getCursor = connection.cursor()
     setCursor = connection.cursor()
-    pattern = 'plugin://plugin.video.watchnixtoons2/%actionResolve%'
+    pattern = 'plugin://plugin.video.watchnixtoons2.kodi19/%actionResolve%'
     for idFile, strFilename in getCursor.execute(
         "SELECT idFile,strFilename FROM files WHERE strFilename LIKE '%s'" % pattern
     ):
