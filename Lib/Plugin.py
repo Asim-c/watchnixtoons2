@@ -338,7 +338,7 @@ def actionCatalogSection(params):
                 hashes.update( json.load(f) )
         elif ADDON_SERIES_THUMBS and path in [ URL_PATHS['dubbed'], URL_PATHS['cartoons'], URL_PATHS['subbed'] ]:
             show_thumbs = True
-            form_hash = True
+            from_hash = True
             if six.PY2:
                 f = open( xbmc.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
             else:
