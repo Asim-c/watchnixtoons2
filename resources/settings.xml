@@ -27,16 +27,16 @@
     </category>
     <category label="Tools">
         <setting type="lsep" label="[B]To restore the 'watched' status of episodes watched on old WNT2 versions:[/B]"/>
-        <setting id="restoreWatched" label="Restore Watched Episodes..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2/?action=actionRestoreDatabase)"/>
+        <setting id="restoreWatched" label="Restore Watched Episodes..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2.kodi19/?action=actionRestoreDatabase)"/>
         <setting type="sep"/>
         <setting type="lsep" label="[B]To update your Kodi Favourites that have links to old WNT2 domains:[/B]"/>
-        <setting id="updateFavourites" label="Update Favourites..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2/?action=actionUpdateFavourites)"/>
+        <setting id="updateFavourites" label="Update Favourites..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2.kodi19/?action=actionUpdateFavourites)"/>
         <setting type="sep"/>
         <setting type="lsep" label="[B]Clear existing WatchNixToons2 Cookies[/B]"/>
-        <setting id="updateCookies" label="Clear Cookies..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2/?action=actionClearCookies)"/>
+        <setting id="updateCookies" label="Clear Cookies..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2.kodi19/?action=actionClearCookies)"/>
     </category>
     <category label="Trakt">
-        <setting id="trakt.about" label="About..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2/?action=actionTraktAbout)"/>
-        <setting id="clearTrakt" label="Clear Trakt Token" type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2/?action=actionClearTrakt)"/>
+        <setting id="trakt.about" label="About..." type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2.kodi19/?action=actionTraktAbout)"/>
+        <setting id="clearTrakt" label="Clear Trakt Token" type="action" action="RunPlugin(plugin://plugin.video.watchnixtoons2.kodi19/?action=actionClearTrakt)"/>
     </category>
 </settings>
