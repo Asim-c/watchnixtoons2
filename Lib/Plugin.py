@@ -78,6 +78,7 @@ else:
 # Due to a recent bug on the server end, the mobile URL is now only used on 'makeLatestCatalog()'.
 # BASEURL_MOBILE = 'https://m.wcostream.com' # Mobile version of one of their domains (seems to be the only one).
 BASEURL_ALT = 'https://www.wcofun.net'
+IMAGES_URL = 'https://cdn.animationexplore.com'
 
 PROPERTY_CATALOG_PATH = 'wnt2.catalogPath'
 PROPERTY_CATALOG = 'wnt2.catalog'
@@ -152,6 +153,8 @@ ADDON_FANART = os.path.join(xbmcaddon.Addon().getAddonInfo('path')) + osSeparato
 ADDON_ICON_DICT = {'icon': ADDON_ICON, 'thumb': ADDON_ICON, 'poster': ADDON_ICON, 'fanart': ADDON_FANART}
 RESOURCE_URL = 'special://home/addons/{0}resources/'.format(PLUGIN_NAME)
 ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2/resources/traktIcon.png'
+# Uses URL to get fan art for videos
+ADDON_VIDEO_FANART = ADDON.getSetting('showVideoFanart') == 'true'
 
 # To let the source website know it's this plugin. Also used inside "makeLatestCatalog()" and "actionResolve()".
 WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
@@ -316,9 +319,15 @@ def actionCatalogSection(params):
         remove_base = False
         show_thumbs = False
         from_hash = False
+        show_fanart = False
 
-        if ADDON_LATEST_THUMBS and path == URL_PATHS['latest']:
-            show_thumbs = True
+        if path == URL_PATHS['latest']:
+
+            if ADDON_LATEST_THUMBS:
+                show_thumbs = True
+
+            if ADDON_VIDEO_FANART:
+                show_fanart = True
 
             # Special-case for the 'Latest Releases' catalog, which has some thumbnails available.
             # Each 'entry' is (URL, htmlTitle, thumb).
@@ -344,6 +353,11 @@ def actionCatalogSection(params):
             else:
                 f = open( xbmcvfs.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
             hashes = json.load(f)
+        elif ADDON_VIDEO_FANART and path in [ URL_PATHS['movies'], URL_PATHS['ova'] ]:
+
+            # we can also use the fanart for movies and OVAs
+            remove_base = True
+            show_fanart = True
 
         for entry in sectionItems:
 
@@ -369,12 +383,16 @@ def actionCatalogSection(params):
                         artDict if entry[2].startswith(NO_THUMB) else {'icon':ADDON_ICON,'thumb':entry[2],'poster':entry[2]}
                     )
                 elif show_thumbs and from_hash and generateMd5( entryURL ) in hashes.keys():
-                    thumb_from_hash = 'https://cdn.animationexplore.com/catimg/' + hashes[ generateMd5( entryURL ) ] + '.jpg'
+                    thumb_from_hash = IMAGES_URL + '/catimg/' + hashes[ generateMd5( entryURL ) ] + '.jpg'
                     entryArt = (
                         {'icon':ADDON_ICON,'thumb':thumb_from_hash,'poster':thumb_from_hash}
                     )
                 else:
                     entryArt = artDict
+
+                # add fanart if option is selected
+                if show_fanart:
+                    entryArt['fanart'] = IMAGES_URL + '/thumbs' + entryURL + '.jpg'
 
                 yield (
                     buildURL({'action': action, 'url': entryURL}),
@@ -447,6 +465,11 @@ def actionEpisodesMenu(params):
         itemParams = {'action': 'actionResolve', 'url': None}
         listIter = iter(listData[2]) if ADDON.getSetting('reverseEpisodes') == 'true' else reversed(listData[2])
         for URL, title in listIter:
+
+            # add fanart if option is selected
+            if ADDON_VIDEO_FANART:
+                artDict['fanart'] = URL.replace( BASEURL, IMAGES_URL + '/thumbs' ) + '.jpg'
+
             item = listItemFunc(title, URL, artDict, plot, isFolder=False, isSpecial=False, oldParams=None, URLCacheQuote=URLCacheQuote)
             itemParams['url'] = URL
             if URL in URLCache:
@@ -964,7 +987,7 @@ def getPageMetadata(html):
 
     if thumb:
         # animationexplore seems more reliable
-        thumb = thumb.replace( BASEURL + '/wp-content', 'https://cdn.animationexplore.com' )
+        thumb = thumb.replace( BASEURL + '/wp-content', IMAGES_URL )
 
     # (Show) plot scraping.
     plot = ''
