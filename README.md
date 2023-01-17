@@ -11,3 +11,5 @@ You can provide your username and password from this addon's setting menu on the
 # Important Note!  If you enter bad credentials or change credentials later, you will have to correct this in the settings menu on the interface section then go to the tools section and click on clear cookies.  If you don't do this, the plugin will error out.
 
 ### To view recent updates to this plugin see this [addon.xml](../kodi19/addon.xml) file.
+
+### To install this plugin in Kodi 18 or 19 and have it automatically updated when udpates are made, you can install it via the repository [here](https://github.com/christianhaitian/ch.repo)
