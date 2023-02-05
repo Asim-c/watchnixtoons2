@@ -353,11 +353,27 @@ def actionCatalogSection(params):
             else:
                 f = open( xbmcvfs.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
             hashes = json.load(f)
-        elif ADDON_VIDEO_FANART and path in [ URL_PATHS['movies'], URL_PATHS['ova'] ]:
+
+
+        elif path in [ URL_PATHS['movies'], URL_PATHS['ova'] ]:
+
+            remove_base = True
+
+            if ADDON_SERIES_THUMBS:
+
+                show_thumbs = True
+                from_hash = True
+
+                # get required hash file for thumbnails
+                if six.PY2:
+                    f = open( xbmc.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
+                else:
+                    f = open( xbmcvfs.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
+                hashes = json.load(f)
 
             # we can also use the fanart for movies and OVAs
-            remove_base = True
-            show_fanart = True
+            if ADDON_VIDEO_FANART:
+                show_fanart = True
 
         for entry in sectionItems:
 
@@ -511,6 +527,11 @@ def actionLatestMoviesMenu(params):
         # The page has like 6000 items going back to 2010, so we limit to only the latest 200.
         for x in xrange(200):
             entryURL, entryTitle = next(reIter).groups()
+
+            # add fanart if option is selected
+            if ADDON_VIDEO_FANART:
+                artDict['fanart'] = entryURL.replace( BASEURL, IMAGES_URL + '/thumbs' ) + '.jpg'
+
             if entryURL in infoItems:
                 entryPlot, entryThumb = infoItems[entryURL]
                 yield (
