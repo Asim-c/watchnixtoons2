@@ -1662,6 +1662,13 @@ def actionResolve(params):
         if not mediaHead:
             return xbmcplugin.setResolvedUrl(PLUGIN_ID, False, xbmcgui.ListItem())
 
+        # Enforce the add-on debug setting to use HTTP access on the stream.
+        if ADDON.getSetting('useHTTP') == 'true':
+            # This is an attempt to fix the fact that, on newer Kodi versions, the debug log says that there
+            # was an SSL failure, with this line in the log (with debug logging activated):
+            # "ERROR: CCurlFile::Stat - Failed: SSL peer certificate or SSH remote key was not OK(60)"
+            mediaHead.url = mediaHead.url.replace('https://', 'http://', 1)
+
         # Need to use the exact same ListItem name & infolabels when playing or else Kodi replaces that item
         # in the UI listing.
         item = xbmcgui.ListItem(xbmc.getInfoLabel('ListItem.Label'))
@@ -1729,6 +1736,14 @@ def actionResolve(params):
 				}
         mediaHead = solveMediaRedirect(mediaURL, MEDIA_HEADERS)
         item = xbmcgui.ListItem(xbmc.getInfoLabel('ListItem.Label'))
+
+        # Enforce the add-on debug setting to use HTTP access on the stream.
+        if ADDON.getSetting('useHTTP') == 'true':
+            # This is an attempt to fix the fact that, on newer Kodi versions, the debug log says that there
+            # was an SSL failure, with this line in the log (with debug logging activated):
+            # "ERROR: CCurlFile::Stat - Failed: SSL peer certificate or SSH remote key was not OK(60)"
+            mediaHead.url = mediaHead.url.replace('https://', 'http://', 1)
+
         item.setPath(mediaHead.url + '|' + '&'.join(key+'='+urllib_parse.quote_plus(val) for key, val in MEDIA_HEADERS.items()))
         item.setMimeType(mediaHead.headers.get('Content-Type', 'video/mp4')) # Avoids Kodi's MIME request.
 			# When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
@@ -1926,6 +1941,13 @@ def actionResolve(params):
             mediaHead = solveMediaRedirect(backupURL, MEDIA_HEADERS)
         if not mediaHead:
             return xbmcplugin.setResolvedUrl(PLUGIN_ID, False, xbmcgui.ListItem())
+
+        # Enforce the add-on debug setting to use HTTP access on the stream.
+        if ADDON.getSetting('useHTTP') == 'true':
+            # This is an attempt to fix the fact that, on newer Kodi versions, the debug log says that there
+            # was an SSL failure, with this line in the log (with debug logging activated):
+            # "ERROR: CCurlFile::Stat - Failed: SSL peer certificate or SSH remote key was not OK(60)"
+            mediaHead.url = mediaHead.url.replace('https://', 'http://', 1)
 
         # Need to use the exact same ListItem name & infolabels when playing or else Kodi replaces that item
         # in the UI listing.
@@ -2139,6 +2161,13 @@ def actionResolve(params):
             mediaHead = solveMediaRedirect(backupURL, MEDIA_HEADERS)
         if not mediaHead:
             return xbmcplugin.setResolvedUrl(PLUGIN_ID, False, xbmcgui.ListItem())
+
+        # Enforce the add-on debug setting to use HTTP access on the stream.
+        if ADDON.getSetting('useHTTP') == 'true':
+            # This is an attempt to fix the fact that, on newer Kodi versions, the debug log says that there
+            # was an SSL failure, with this line in the log (with debug logging activated):
+            # "ERROR: CCurlFile::Stat - Failed: SSL peer certificate or SSH remote key was not OK(60)"
+            mediaHead.url = mediaHead.url.replace('https://', 'http://', 1)
 
         # Need to use the exact same ListItem name & infolabels when playing or else Kodi replaces that item
         # in the UI listing.
