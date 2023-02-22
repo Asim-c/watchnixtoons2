@@ -47,17 +47,13 @@ from requests.adapters import HTTPAdapter
 class TLS11HttpAdapter(HTTPAdapter):
     # "Transport adapter" that allows us to use TLSv1.1
     def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = PoolManager(
-            num_pools=connections, maxsize=maxsize,
-            block=block, ssl_version=ssl.PROTOCOL_TLSv1_1)
+        self.poolmanager = PoolManager(num_pools=connections, maxsize=maxsize, block=block, ssl_version=ssl.PROTOCOL_TLSv1_1)
 
 
 class TLS12HttpAdapter(HTTPAdapter):
     # "Transport adapter" that allows us to use TLSv1.2
     def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = PoolManager(
-            num_pools=connections, maxsize=maxsize,
-            block=block, ssl_version=ssl.PROTOCOL_TLSv1_2)
+        self.poolmanager = PoolManager(num_pools=connections, maxsize=maxsize, block=block, ssl_version=ssl.PROTOCOL_TLSv1_2)
 
 
 s = requests.session()
@@ -66,6 +62,7 @@ tls_adapters = [TLS12HttpAdapter(), TLS11HttpAdapter()]
 PLUGIN_ID = int(sys.argv[1])
 PLUGIN_URL = sys.argv[0]
 PLUGIN_NAME = PLUGIN_URL.replace("plugin://","")
+PLUGIN_TITLE = 'WatchNixtoons2'
 
 #Mod by Christian Haitian starts here
 ADDON = xbmcaddon.Addon()
@@ -157,7 +154,7 @@ ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2/resources/
 ADDON_VIDEO_FANART = ADDON.getSetting('showVideoFanart') == 'true'
 
 # To let the source website know it's this plugin. Also used inside "makeLatestCatalog()" and "actionResolve()".
-WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
 
 MEDIA_HEADERS = None # Initialized in 'actionResolve()'.
 
@@ -182,7 +179,7 @@ def actionMenu(params):
     def _menuItem(title, data, color):
         item = xbmcgui.ListItem('[B][COLOR ' + color + ']' + title + '[/COLOR][/B]', label2 = title)
         item.setArt(ADDON_ICON_DICT)
-        item.setInfo('video', {'title': title, 'plot': title})
+        item_set_info( item, {'title': title, 'plot': title} )
         return (buildURL(data), item, True)
 
     xbmcplugin.addDirectoryItems(
@@ -225,7 +222,7 @@ def actionCatalogMenu(params):
                         # Correct the address for the '#' (miscellaneous, non-letter) category.
                         artDict['thumb'] = THUMBS_BASEURL + ('0' if sectionName == '#' else sectionName) + '.png'
                         item.setArt(artDict)
-                        item.setInfo('video', {'plot': sectionName})
+                        item_set_info( item, {'plot': sectionName} )
                         items.append(
                             (
                                 buildURL({'action': 'actionCatalogSection', 'path': params['path'], 'section': sectionName}),
@@ -252,7 +249,7 @@ def actionCatalogMenu(params):
                 if ADDON_CATALOG_THUMBS:
                     artDict['thumb'] = THUMBS_BASEURL + 'ALL.png'
                     sectionAll[1].setArt(artDict)
-                    sectionAll[1].setInfo('video', {'plot': 'All'})
+                    item_set_info( sectionAll[1], {'plot': 'All'} )
                 return [sectionAll] + items
             else:
                 return items
@@ -340,18 +337,12 @@ def actionCatalogSection(params):
 
             hashes = {}
             for path_tmp in [ URL_PATHS['dubbed'], URL_PATHS['cartoons'], URL_PATHS['subbed'] ]:
-                if six.PY2:
-                    f = open( xbmc.translatePath( RESOURCE_URL + 'data/' + path_tmp.replace('/','') + '.json' ) )
-                else:
-                    f = open( xbmcvfs.translatePath( RESOURCE_URL + 'data/' + path_tmp.replace('/','') + '.json' ) )
+                f = open( translate_path( RESOURCE_URL + 'data/' + path_tmp.replace('/','') + '.json' ) )
                 hashes.update( json.load(f) )
         elif ADDON_SERIES_THUMBS and path in [ URL_PATHS['dubbed'], URL_PATHS['cartoons'], URL_PATHS['subbed'] ]:
             show_thumbs = True
             from_hash = True
-            if six.PY2:
-                f = open( xbmc.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
-            else:
-                f = open( xbmcvfs.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
+            f = open( translate_path( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
             hashes = json.load(f)
 
 
@@ -365,10 +356,7 @@ def actionCatalogSection(params):
                 from_hash = True
 
                 # get required hash file for thumbnails
-                if six.PY2:
-                    f = open( xbmc.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
-                else:
-                    f = open( xbmcvfs.translatePath( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
+                f = open( translate_path( RESOURCE_URL + 'data/' + path.replace('/','') + '.json' ) )
                 hashes = json.load(f)
 
             # we can also use the fanart for movies and OVAs
@@ -385,26 +373,28 @@ def actionCatalogSection(params):
 
             # If there's metadata for this entry (requested by the user with "Show Information"), use it.
             if entryURL in infoItems:
+                    entryParams = None
                     itemPlot, itemThumb = infoItems[entryURL]
                     entryArt = {'icon': ADDON_ICON, 'thumb': itemThumb, 'poster': itemThumb}
-                    yield (
-                        buildURL({'action': action, 'url': entryURL}),
-                        listItemFunc(entry[1], entryURL, entryArt, itemPlot, isFolder, isSpecial, None),
-                        isFolder
-                    )
             else:
 
+                # do this here so we only need to create a hash once per entry
+                if show_thumbs and from_hash:
+                    hashURL = generateMd5( entryURL )
+
+                # Decide what artwork to show
                 if show_thumbs and from_hash == False:
                     entryArt = (
                         artDict if entry[2].startswith(NO_THUMB) else {'icon':ADDON_ICON,'thumb':entry[2],'poster':entry[2]}
                     )
-                elif show_thumbs and from_hash and generateMd5( entryURL ) in hashes.keys():
-                    thumb_from_hash = IMAGES_URL + '/catimg/' + hashes[ generateMd5( entryURL ) ] + '.jpg'
-                    entryArt = (
-                        {'icon':ADDON_ICON,'thumb':thumb_from_hash,'poster':thumb_from_hash}
-                    )
+                elif show_thumbs and from_hash and hashes.get( hashURL, False ):
+                    thumb_from_hash = IMAGES_URL + '/catimg/' + hashes.get( hashURL, '' ) + '.jpg'
+                    entryArt = {'icon': ADDON_ICON, 'thumb': thumb_from_hash, 'poster': thumb_from_hash}
                 else:
                     entryArt = artDict
+
+                itemPlot = ''
+                entryParams = params
 
                 # add fanart if option is selected
                 if show_fanart:
@@ -412,7 +402,7 @@ def actionCatalogSection(params):
 
                 yield (
                     buildURL({'action': action, 'url': entryURL}),
-                    listItemFunc(entry[1], entryURL, entryArt, '', isFolder, isSpecial, params),
+                    listItemFunc(entry[1], entryURL, entryArt, itemPlot, isFolder, isSpecial, entryParams),
                     isFolder
                 )
 
@@ -519,45 +509,49 @@ def actionLatestMoviesMenu(params):
     # Persistent property with item metadata.
     infoItems = getWindowProperty(PROPERTY_INFO_ITEMS) or { }
 
+    if ADDON_SERIES_THUMBS:
+        # get required hash file for thumbnails
+        f = open( translate_path( RESOURCE_URL + 'data/movie-list.json' ) )
+        hashes = json.load(f)
+
     def _movieItemsGen():
-        artDict = {'icon': ADDON_ICON, 'thumb': ADDON_ICON, 'poster': ADDON_ICON, 'fanart': ADDON_FANART}
         reIter = finditer(
             '''<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('"sidebar-all"')]
         )
         # The page has like 6000 items going back to 2010, so we limit to only the latest 200.
         for x in xrange(200):
+
+            artDict = ADDON_ICON_DICT
             entryURL, entryTitle = next(reIter).groups()
+
+            if ADDON_SERIES_THUMBS:
+                entryHash = generateMd5( entryURL.replace( BASEURL, '' ) )
+                if entryHash in hashes.keys():
+                    thumb_from_hash = IMAGES_URL + '/catimg/' + hashes[ entryHash ] + '.jpg'
+                    artDict = {'icon': ADDON_ICON, 'thumb': thumb_from_hash, 'poster': thumb_from_hash}
+
+            if entryURL in infoItems:
+                entryPlot, entryThumb = infoItems[entryURL]
+                artDict = {'icon': ADDON_ICON, 'thumb': entryThumb, 'poster': entryThumb}
+                entryParams = None
+            else:
+                entryPlot = ''
+                entryParams = params
 
             # add fanart if option is selected
             if ADDON_VIDEO_FANART:
                 artDict['fanart'] = entryURL.replace( BASEURL, IMAGES_URL + '/thumbs' ) + '.jpg'
 
-            if entryURL in infoItems:
-                entryPlot, entryThumb = infoItems[entryURL]
-                yield (
-                    buildURL({'action': 'actionResolve', 'url': entryURL}),
-                    makeListItem(
-                        unescapeHTMLText(entryTitle),
-                        entryURL,
-                        {'icon': ADDON_ICON, 'thumb': entryThumb, 'poster': entryThumb, 'fanart': ADDON_FANART},
-                        entryPlot,
-                        isFolder = False,
-                        isSpecial = True,
-                        oldParams = params
-                    ),
-                    False
-                )
-            else:
                 yield (
                     buildURL({'action': 'actionResolve', 'url': entryURL}),
                     makeListItem(
                         unescapeHTMLText(entryTitle),
                         entryURL,
                         artDict,
-                        '',
+                        entryPlot,
                         isFolder = False,
                         isSpecial = True,
-                        oldParams = params
+                        oldParams = entryParams
                     ),
                     False
                 )
@@ -691,7 +685,7 @@ def actionSearchHistoryClear(params):
     dialog = xbmcgui.Dialog()
     if dialog.yesno('Clear Search History', 'Are you sure?'):
         ADDON.setSetting('searchHistory', '')
-        dialog.notification('WatchNixtoons2', 'Search history cleared', xbmcgui.NOTIFICATION_INFO, 3000, False)
+        dialog.notification('PLUGIN_TITLE', 'Search history cleared', xbmcgui.NOTIFICATION_INFO, 3000, False)
         # Show the search menu afterwards.
         xbmc.executebuiltin('Container.Update(' + PLUGIN_URL + '?action=actionSearchMenu,replace)')
 
@@ -734,7 +728,7 @@ def actionTraktMenu(params):
             for listName, listURL, listDescription in instance.getUserLists(ADDON):
                 item = xbmcgui.ListItem(listName)
                 item.setArt(traktIconDict)
-                item.setInfo('video', {'title': listName, 'plot': listDescription})
+                item_set_info( item, {'title': listName, 'plot': listDescription} )
                 yield (
                     buildURL({'action': 'actionTraktList', 'listURL': listURL}),
                     item,
@@ -753,7 +747,7 @@ def actionTraktList(params):
             traktIconDict = {'icon': ADDON_TRAKT_ICON, 'thumb': ADDON_TRAKT_ICON, 'poster': ADDON_TRAKT_ICON}
             for itemName, overview, searchType, query in sorted(instance.getListItems(params['listURL'], ADDON)):
                 item = xbmcgui.ListItem(itemName)
-                item.setInfo('video', {'title': itemName, 'plot': overview})
+                item_set_info( item, {'title': itemName, 'plot': overview} )
                 item.setArt(traktIconDict)
                 yield (
                     # Trakt items will lead straight to a show name search.
@@ -775,7 +769,7 @@ def actionTraktList(params):
 
 def actionTraktAbout(params):
     xbmcgui.Dialog().ok(
-        'WatchNixtoons2',
+        PLUGIN_TITLE,
         'To search for items in your Trakt lists in WNT2, go to [B]Search > Search by Trakt List[/B] and pair your ' \
         'account. Searching for an item this way does a name search, same as if you went and searched for that ' \
         'name manually.'
@@ -793,17 +787,15 @@ def actionClearTrakt(params):
     global ADDON
     xbmc.sleep(500)
     if SimpleTrakt.clearTokens(ADDON):
-        xbmcgui.Dialog().notification('WatchNixtoons2', 'Trakt tokens cleared', xbmcgui.NOTIFICATION_INFO, 3500, False)
+        xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Trakt tokens cleared', xbmcgui.NOTIFICATION_INFO, 3500, False)
     else:
-        xbmcgui.Dialog().notification(
-            'WatchNixtoons2', 'Trakt tokens already cleared', xbmcgui.NOTIFICATION_INFO, 3500, False
-        )
+        xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Trakt tokens already cleared', xbmcgui.NOTIFICATION_INFO, 3500, False)
     ADDON = xbmcaddon.Addon()
 
 
 def actionRestoreDatabase(params):
     if not xbmcgui.Dialog().yesno(
-        'WatchNixtoons2',
+        PLUGIN_TITLE,
         'This will update the Kodi database to remember any WatchNixtoons2 episodes that were already watched, ' \
         'but forgotten after an add-on update.\nProceed?',
         nolabel = 'Cancel',
@@ -818,24 +810,17 @@ def actionRestoreDatabase(params):
     try:
         import sqlite3
     except:
-        xbmcgui.Dialog().notification(
-            'WatchNixtoons2', 'sqlite3 not found', xbmcgui.NOTIFICATION_WARNING, 3000, True
-        )
+        xbmcgui.Dialog().notification(PLUGIN_TITLE, 'sqlite3 not found', xbmcgui.NOTIFICATION_WARNING, 3000, True)
         return
 
     # Find the 'MyVideos###.db' file.
     dirs, files = xbmcvfs.listdir('special://database')
     for file in files:
         if 'MyVideos' in file and file.endswith('.db'):
-            if six.PY2:
-                path = xbmc.translatePath('special://database/' + file)
-            else:
-                path = xbmcvfs.translatePath('special://database/' + file)
+            path = translate_path('special://database/' + file)
             break
     else:
-        xbmcgui.Dialog().notification(
-            'WatchNixtoons2', 'MyVideos database file not found', xbmcgui.NOTIFICATION_WARNING, 3000, True
-        )
+        xbmcgui.Dialog().notification(PLUGIN_TITLE, 'MyVideos database file not found', xbmcgui.NOTIFICATION_WARNING, 3000, True)
         return
 
     # Update the database.
@@ -849,9 +834,7 @@ def actionRestoreDatabase(params):
         connection = sqlite3.connect(path)
     except Exception as e:
         xbmcDebug(e)
-        xbmcgui.Dialog().notification(
-            'WatchNixtoons2', 'Unable to connect to MyVideos database', xbmcgui.NOTIFICATION_WARNING, 3000, True
-        )
+        xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Unable to connect to MyVideos database', xbmcgui.NOTIFICATION_WARNING, 3000, True)
         return
 
     if six.PY3:
@@ -859,7 +842,7 @@ def actionRestoreDatabase(params):
 
     getCursor = connection.cursor()
     setCursor = connection.cursor()
-    pattern = 'plugin://plugin.video.watchnixtoons2/%actionResolve%'
+    pattern = PLUGIN_URL + '%actionResolve%'
     for idFile, strFilename in getCursor.execute(
         "SELECT idFile,strFilename FROM files WHERE strFilename LIKE '%s'" % pattern
     ):
@@ -873,25 +856,19 @@ def actionRestoreDatabase(params):
             connection.commit() # Only commit if needed.
         connection.close()
     except:
-        xbmcgui.Dialog().notification(
-            'WatchNixtoons2',
-            'Unable to update the database (file permission error?)',
-            xbmcgui.NOTIFICATION_WARNING,
-            3000,
-            True
-        )
+        xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Unable to update the database (file permission error?)', xbmcgui.NOTIFICATION_WARNING, 3000, True)
         return
 
     # Bring a notification before finishing.
     if totalUpdates:
-        xbmcgui.Dialog().ok('WatchNixtoons2', 'Database update complete (%i items updated).' % totalUpdates)
+        xbmcgui.Dialog().ok(PLUGIN_TITLE, 'Database update complete (%i items updated).' % totalUpdates)
     else:
-        xbmcgui.Dialog().ok('WatchNixtoons2', 'Finished. No updates needed (0 items updated).')
+        xbmcgui.Dialog().ok(PLUGIN_TITLE, 'Finished. No updates needed (0 items updated).')
 
 
 def actionUpdateFavourites(params):
     if not xbmcgui.Dialog().yesno(
-        'WatchNixtoons2',
+        PLUGIN_TITLE,
         'This will update any of your Kodi Favourites created with older versions of WatchNixtoons2 so they can point ' \
         'to the latest web address that the add-on uses.\nProceed?',
         nolabel = 'Cancel',
@@ -931,20 +908,16 @@ def actionUpdateFavourites(params):
             except:
                 detail = ''
 
-            xbmcgui.Dialog().notification(
-                'WatchNixtoons2', 'Error while writing to file' + detail, xbmcgui.NOTIFICATION_WARNING, 3000, True
-            )
+            xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Error while writing to file' + detail, xbmcgui.NOTIFICATION_WARNING, 3000, True)
             return
 
         if 'watchnixtoons2' in xbmc.getInfoLabel('Container.PluginName'):
             xbmc.executebuiltin('Dialog.Close(all)')
 
-        xbmcgui.Dialog().ok(
-            'WatchNixtoons2', 'One or more items updated succesfully. Kodi will now reload the Favourites file...'
-        )
+        xbmcgui.Dialog().ok(PLUGIN_TITLE, 'One or more items updated succesfully. Kodi will now reload the Favourites file...')
         xbmc.executebuiltin('LoadProfile(%s)' % xbmc.getInfoLabel('System.ProfileName')) # Reloads 'favourites.xml'.
     else:
-        xbmcgui.Dialog().ok('WatchNixtoons2', 'Finished. No old favorites found.')
+        xbmcgui.Dialog().ok(PLUGIN_TITLE, 'Finished. No old favorites found.')
 
 #Added by Christian Haitian
 def actionClearCookies(params):
@@ -961,7 +934,7 @@ def actionClearCookies(params):
     # Clear stored cookie file from addon folder.
 
     os.remove(cookieFile)
-    xbmcgui.Dialog().ok('WatchNixtoons2', 'Successfully cleared cookies.')
+    xbmcgui.Dialog().ok(PLUGIN_TITLE, 'Successfully cleared cookies.')
 
 def actionShowSettings(params):
     # Modal dialog, so the program won't continue from this point until user closes\confirms it.
@@ -1021,7 +994,7 @@ def getPageMetadata(html):
 
 
 def actionShowInfo(params):
-    xbmcgui.Dialog().notification('WatchNixtoons2', 'Requesting info...', ADDON_ICON, 2000, False)
+    xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Requesting info...', ADDON_ICON, 2000, False)
 
     # Get the desktop page for the item, whatever it is.
     url = params['url'].replace('/m.', '/www.', 1) # Make sure the URL points to the desktop site.
@@ -1038,20 +1011,7 @@ def actionShowInfo(params):
         oldParams = dict(urllib_parse.parse_qsl(params['oldParams']))
         xbmc.executebuiltin('Container.Update(%s,replace)' % (PLUGIN_URL + '?' + params['oldParams']))
     else:
-        xbmcgui.Dialog().notification('WatchNixtoons2', 'No info found', ADDON_ICON, 1500, False)
-
-
-def unescapeHTMLText(text):
-    # text = text.encode('utf-8') if isinstance(text, unicode) else unicode(text, errors='ignore').encode('utf-8')
-    if isinstance(text, six.text_type) and six.PY2:
-        text = text.encode('utf-8')
-    # Unescape HTML entities.
-    if r'&#' in text:
-        # Strings found by regex-searching on all lists in the source website. It's very likely to only be these.
-        text = text.replace(r'&#8216;', '‘').replace(r'&#8221;', '”').replace(r'&#8211;', '–').replace(r'&#038;', '&')\
-        .replace(r'&#8217;', '’').replace(r'&#8220;', '“').replace(r'&#8230;', '…').replace(r'&#160;', ' ')
-
-    return text.replace(r'&amp;', '&').replace(r'&quot;', '"').replace('\u2606', ' ')
+        xbmcgui.Dialog().notification(PLUGIN_TITLE, 'No info found', ADDON_ICON, 1500, False)
 
 
 def getTitleInfo(unescapedTitle):
@@ -1127,12 +1087,12 @@ def makeListItem(title, url, artDict, plot, isFolder, isSpecial, oldParams, URLC
         if episode and episode.isdigit():
             itemInfo['season'] = int(season) if season.isdigit() else -1
             itemInfo['episode'] = int(episode)
-        item.setInfo('video', itemInfo)
+        item_set_info( item, itemInfo )
     elif isSpecial:
         isPlayable = True
-        item.setInfo('video', {'mediatype': 'movie', 'title': unescapedTitle, 'plot': plot})
+        item_set_info( item, {'mediatype': 'movie', 'title': unescapedTitle, 'plot': plot} )
     else:
-        item.setInfo('video', {'mediatype': 'tvshow', 'title': unescapedTitle, 'plot': plot})
+        item_set_info( item, {'mediatype': 'tvshow', 'title': unescapedTitle, 'plot': plot} )
 
     if artDict:
         item.setArt(artDict)
@@ -1178,7 +1138,7 @@ def makeListItemClean(title, url, artDict, plot, isFolder, isSpecial, oldParams,
         item = xbmcgui.ListItem(unescapedTitle)
         if isSpecial:
             isPlayable = True
-            item.setInfo('video', {'mediatype': 'video', 'title': unescapedTitle})
+            item_set_info( item, {'mediatype': 'video', 'title': unescapedTitle} )
     else:
         title, season, episode, multiPart, episodeTitle = getTitleInfo(unescapedTitle)
         if episode and episode.isdigit():
@@ -1198,7 +1158,7 @@ def makeListItemClean(title, url, artDict, plot, isFolder, isSpecial, oldParams,
         else:
             item = xbmcgui.ListItem(title)
             itemInfo = {'mediatype': 'tvshow', 'tvshowtitle': title, 'title': title, 'plot': plot}
-        item.setInfo('video', itemInfo)
+        item_set_info( item, itemInfo )
         isPlayable = True
 
     if artDict:
@@ -1491,7 +1451,7 @@ def actionResolve(params):
         embedURL = findall(r'file: "(.*?)"',str(content))  
         # User asked to play multiple chapters, but only one chapter/video player found.
         if embedURL and 'playChapters' in params:
-            xbmcgui.Dialog().notification('WatchNixtoons2', 'Only 1 chapter found...', ADDON_ICON, 2000, False)
+            xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Only 1 chapter found...', ADDON_ICON, 2000, False)
 
     premiumlinks = embedURL
     mediaURL = None
@@ -1521,7 +1481,7 @@ def actionResolve(params):
                 else:
                     mediaURL = premiumlinks[1] if premiumlinks1 == 'Response [200]' else premiumlinks[0]
         else: # Auto-play user choice.
-            if playbackMethod == '0':
+            if playbackMethod == '1':
              mediaURL = premiumlinks[1] if str(premiumlinks1) == '<Response [200]>' else premiumlinks[0]
             else:
              mediaURL = premiumlinks[0] if str(premiumlinks0) == '<Response [200]>' else premiumlinks[1]
@@ -1583,13 +1543,13 @@ def actionResolve(params):
         embedURL = _decodeSource(content[embedURLIndex:])
         # User asked to play multiple chapters, but only one chapter/video player found.
         if embedURL and 'playChapters' in params:
-            xbmcgui.Dialog().notification('WatchNixtoons2', 'Only 1 chapter found...', ADDON_ICON, 2000, False)
+            xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Only 1 chapter found...', ADDON_ICON, 2000, False)
 
      # Handle temporary blocks / failures.
      if not embedURL:
         if 'high volume of requests' in content:
             xbmcgui.Dialog().ok(
-                'WatchNixtoons2 Fail (Server Response)',
+                PLUGIN_TITLE + ' Fail (Server Response)',
                 '"We are getting extremely high volume of requests on our video servers so that we temporarily block for free videos for free users. I apologize for the inconvenience."'
             )
         return
@@ -1715,7 +1675,7 @@ def actionResolve(params):
         episodeString = xbmc.getInfoLabel('ListItem.Episode')
         if episodeString != '' and episodeString != '-1':
             seasonInfoLabel = xbmc.getInfoLabel('ListItem.Season')
-            item.setInfo('video',
+            item_set_info( item,
                 {
                     'tvshowtitle': xbmc.getInfoLabel('ListItem.TVShowTitle'),
                     'title': unescapeHTMLText(itemTitle),
@@ -1726,7 +1686,7 @@ def actionResolve(params):
                 }
             )
         else:
-            item.setInfo('video',
+            item_set_info( item,
                 {
                     'title': unescapeHTMLText(itemTitle),
                     'plot': xbmc.getInfoLabel('ListItem.Plot'),
@@ -1786,7 +1746,7 @@ def actionResolve(params):
         episodeString = xbmc.getInfoLabel('ListItem.Episode')
         if episodeString != '' and episodeString != '-1':
                 seasonInfoLabel = xbmc.getInfoLabel('ListItem.Season')
-                item.setInfo('video',
+                item_set_info( item,
 					{
 						'tvshowtitle': xbmc.getInfoLabel('ListItem.TVShowTitle'),
 						'title': itemTitle,
@@ -1797,7 +1757,7 @@ def actionResolve(params):
 					}
 				)
         else:
-                item.setInfo('video',
+                item_set_info( item,
 					{
 						'title': itemTitle,
 						'plot': xbmc.getInfoLabel('ListItem.Plot'),
@@ -1863,13 +1823,13 @@ def actionResolve(params):
         embedURL = _decodeSource(content[embedURLIndex:])
         # User asked to play multiple chapters, but only one chapter/video player found.
         if embedURL and 'playChapters' in params:
-            xbmcgui.Dialog().notification('WatchNixtoons2', 'Only 1 chapter found...', ADDON_ICON, 2000, False)
+            xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Only 1 chapter found...', ADDON_ICON, 2000, False)
 
      # Handle temporary blocks / failures.
      if not embedURL:
         if 'high volume of requests' in content:
             xbmcgui.Dialog().ok(
-                'WatchNixtoons2 Fail (Server Response)',
+                PLUGIN_TITLE + ' Fail (Server Response)',
                 '"We are getting extremely high volume of requests on our video servers so that we temporarily block for free videos for free users. I apologize for the inconvenience."'
             )
         return
@@ -1995,7 +1955,7 @@ def actionResolve(params):
         episodeString = xbmc.getInfoLabel('ListItem.Episode')
         if episodeString != '' and episodeString != '-1':
             seasonInfoLabel = xbmc.getInfoLabel('ListItem.Season')
-            item.setInfo('video',
+            item_set_info( item,
                 {
                     'tvshowtitle': xbmc.getInfoLabel('ListItem.TVShowTitle'),
                     'title': itemTitle,
@@ -2006,7 +1966,7 @@ def actionResolve(params):
                 }
             )
         else:
-            item.setInfo('video',
+            item_set_info( item,
                 {
                     'title': itemTitle,
                     'plot': xbmc.getInfoLabel('ListItem.Plot'),
@@ -2084,13 +2044,13 @@ def actionResolve(params):
         embedURL = _decodeSource(content[embedURLIndex:])
         # User asked to play multiple chapters, but only one chapter/video player found.
         if embedURL and 'playChapters' in params:
-            xbmcgui.Dialog().notification('WatchNixtoons2', 'Only 1 chapter found...', ADDON_ICON, 2000, False)
+            xbmcgui.Dialog().notification(PLUGIN_TITLE, 'Only 1 chapter found...', ADDON_ICON, 2000, False)
 
     # Handle temporary blocks / failures.
     if not embedURL:
         if 'high volume of requests' in content:
             xbmcgui.Dialog().ok(
-                'WatchNixtoons2 Fail (Server Response)',
+                PLUGIN_TITLE + ' Fail (Server Response)',
                 '"We are getting extremely high volume of requests on our video servers so that we temporarily block for free videos for free users. I apologize for the inconvenience."'
             )
         return
@@ -2212,7 +2172,7 @@ def actionResolve(params):
         episodeString = xbmc.getInfoLabel('ListItem.Episode')
         if episodeString != '' and episodeString != '-1':
             seasonInfoLabel = xbmc.getInfoLabel('ListItem.Season')
-            item.setInfo('video',
+            item_set_info( item,
                 {
                     'tvshowtitle': xbmc.getInfoLabel('ListItem.TVShowTitle'),
                     'title': itemTitle,
@@ -2223,7 +2183,7 @@ def actionResolve(params):
                 }
             )
         else:
-            item.setInfo('video',
+            item_set_info( item,
                 {
                     'title': itemTitle,
                     'plot': xbmc.getInfoLabel('ListItem.Plot'),
@@ -2243,20 +2203,10 @@ def buildURL(query):
     :param query: Dictionary of url parameters to put in the URL.
     :returns: A formatted and urlencoded URL string.
     '''
-    return (PLUGIN_URL + '?' + urllib_parse.urlencode({k: v.encode('utf-8') if isinstance(v, six.text_type)
-                                         else unicode(v, errors='ignore').encode('utf-8')
-                                         for k, v in query.items()}))
-
-
-def setViewMode():
-    if ADDON.getSetting('useViewMode') == 'true':
-        viewModeID = ADDON.getSetting('viewModeID')
-        if viewModeID.isdigit():
-            xbmc.executebuiltin('Container.SetViewMode(' + viewModeID + ')')
-
-
-def xbmcDebug(*args):
-    xbmc.log('WATCHNIXTOONS2 > ' + ' '.join((val if isinstance(val, str) else repr(val)) for val in args), xbmc.LOGWARNING)
+    return PLUGIN_URL + '?' + \
+        urllib_parse.urlencode({k: v.encode('utf-8') if isinstance(v, six.text_type)
+            else unicode(v, errors='ignore').encode('utf-8')
+            for k, v in query.items()})
 
 
 def simpleRequest(url, requestFunc, headers):
@@ -2275,14 +2225,19 @@ def getThumbnailHeaders():
     cookies = ('&Cookie=' + urllib_parse.quote_plus(cookieProperty)) if cookieProperty else ''
 
     # Since it's a constant value, it can be precomputed.
-    return '|User-Agent='+urllib_parse.quote_plus(WNT2_USER_AGENT)
-    + '&Accept=image%2Fwebp%2C%2A%2F%2A&Referer='+urllib_parse.quote_plus(BASEURL+'/') + cookies
+    return '|User-Agent=' + urllib_parse.quote_plus(WNT2_USER_AGENT) + \
+        '&Accept=image%2Fwebp%2C%2A%2F%2A&Referer=' + urllib_parse.quote_plus(BASEURL+'/') + cookies
 
 
 def getOldDomains():
     # Old possible domains, in the order of likeliness.
     return (
-        'www.thewatchcartoononline.tv', 'www.wcostream.com', 'm.wcostream.com', 'www.watchcartoononline.io', 'm.watchcartoononline.io'
+        'www.wcostream.com',
+        'm.wcostream.com',
+        'www.watchcartoononline.io',
+        'm.watchcartoononline.io',
+        'www.thewatchcartoononline.tv',
+        'www.wcofun.com'
     )
 
 
@@ -2374,4 +2329,5 @@ def main():
     The 'action' parameter is the direct name of the function.
     '''
     params = dict(urllib_parse.parse_qsl(sys.argv[2][1:], keep_blank_values=True))
-    globals()[params.get('action', 'actionMenu')](params) # Defaults to 'actionMenu()'.
+    # Defaults to 'actionMenu()'.
+    globals()[params.get('action', 'actionMenu')](params)
