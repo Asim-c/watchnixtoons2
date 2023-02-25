@@ -67,14 +67,14 @@ PLUGIN_TITLE = 'WatchNixtoons2'
 #Mod by Christian Haitian starts here
 ADDON = xbmcaddon.Addon()
 if (not (ADDON.getSetting('watchnixtoons2.name') and not ADDON.getSetting('watchnixtoons2.name').isspace())):
-    BASEURL = 'https://www.wcofun.net'
+    BASEURL = 'https://www.wcofun.com'
 else:
     BASEURL = 'https://user.wco.tv'
 #Mod by Christian Haitian ends here
 
 # Due to a recent bug on the server end, the mobile URL is now only used on 'makeLatestCatalog()'.
 # BASEURL_MOBILE = 'https://m.wcostream.com' # Mobile version of one of their domains (seems to be the only one).
-BASEURL_ALT = 'https://www.wcofun.net'
+BASEURL_ALT = 'https://www.wcofun.com'
 IMAGES_URL = 'https://cdn.animationexplore.com'
 
 PROPERTY_CATALOG_PATH = 'wnt2.catalogPath'
@@ -428,12 +428,12 @@ def actionEpisodesMenu(params):
         URLCache = {}
         URLCacheQuote = {}
         # New domain safety replace, in case the user is coming in from an old Kodi favorite item.
-        if BASEURL == 'https://www.wcofun.net':
-           url = params['url'].replace('user.wco.tv', 'www.wcofun.net', 1)
+        if BASEURL == 'https://www.wcofun.com':
+           url = params['url'].replace('user.wco.tv', 'www.wcofun.com', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
         else:
-           url = params['url'].replace('www.wcofun.net', 'user.wco.tv', 1)
+           url = params['url'].replace('www.wcofun.com', 'user.wco.tv', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
 
@@ -1488,7 +1488,7 @@ def actionResolve(params):
 
     else: #Check free site in case of a new release that's not on the premium site yet.
      xbmcgui.Dialog().notification('Trying free stream', '')
-     r = requestHelper(url.replace('user.wco.tv', 'www.wcofun.net', 1)) # Change from premium site to free site
+     r = requestHelper(url.replace('user.wco.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
      content = r.content
 
      def _decodeSource(subContent):
@@ -1769,7 +1769,7 @@ def actionResolve(params):
         xbmcplugin.setResolvedUrl(PLUGIN_ID, True, item)
     elif '/inc/embed' in content: #Premium link failed so we'll try the free version now.
      xbmcgui.Dialog().notification('Trying free stream', '')
-     r = requestHelper(url.replace('user.wco.tv', 'www.wcofun.net', 1)) # Change from premium site to free site
+     r = requestHelper(url.replace('user.wco.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
      content = r.content
 
      def _decodeSource(subContent):
@@ -1987,7 +1987,7 @@ def actionResolve(params):
     url = params['url']
     # Sanitize the URL since on some occasions it's a path instead of full address.
     url = url if url.startswith('http') else (BASEURL + (url if url.startswith('/') else '/' + url))
-    r = requestHelper(url.replace('watchcartoononline.io', 'wcofun.net', 1)) # New domain safety.
+    r = requestHelper(url.replace('watchcartoononline.io', 'wcofun.com', 1)) # New domain safety.
     content = r.content
 
     def _decodeSource(subContent):
@@ -2237,7 +2237,7 @@ def getOldDomains():
         'www.watchcartoononline.io',
         'm.watchcartoononline.io',
         'www.thewatchcartoononline.tv',
-        'www.wcofun.com'
+        'www.wcofun.net'
     )
 
 
@@ -2280,14 +2280,17 @@ def requestHelper(url, data=None, extraHeaders=None):
 
     startTime = time()
 
+    # force mount adapter
+    s.mount('https://', tls_adapters[0])
+
     status = 0
-    i = -1
+    i = 1
 
 #Mod by Christian Haitian starts here
     while status != 200 and i < 2:
         if data and BASEURL == 'https://user.wco.tv':
             response = session.post(url, data=data, headers=myHeaders, verify=False, timeout=10)
-        elif data and BASEURL == 'https://www.wcofun.net':
+        elif data and BASEURL == 'https://www.wcofun.com':
             response = s.post(url, data=data, headers=myHeaders, verify=False, cookies=cookieDict, timeout=10)
         else:
              if BASEURL == 'https://user.wco.tv' and 'last-50-recent-release' not in url: 
@@ -2296,9 +2299,10 @@ def requestHelper(url, data=None, extraHeaders=None):
                  response = s.get(url, headers=myHeaders, verify=False, cookies=cookieDict, timeout=10)
         status = response.status_code
         if status != 200:
-            i += 1
+
             if status == 403 and 'cloudflare' == response.headers.get('server', ''):
-                s.mount(url, tls_adapters[i])
+                s.mount('https://', tls_adapters[i])
+            i += 1
 
 #Mod by Christian Haitian ends here
 
