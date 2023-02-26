@@ -384,9 +384,8 @@ def actionCatalogSection(params):
 
                 # Decide what artwork to show
                 if show_thumbs and from_hash == False:
-                    entryArt = (
-                        artDict if entry[2].startswith(NO_THUMB) else {'icon':ADDON_ICON,'thumb':entry[2],'poster':entry[2]}
-                    )
+                    entryArt = {'icon':ADDON_ICON,'thumb':entry[2],'poster':entry[2]}
+
                 elif show_thumbs and from_hash and hashes.get( hashURL, False ):
                     thumb_from_hash = IMAGES_URL + '/catimg/' + hashes.get( hashURL, '' ) + '.jpg'
                     entryArt = {'icon': ADDON_ICON, 'thumb': thumb_from_hash, 'poster': thumb_from_hash}
@@ -1394,7 +1393,7 @@ def actionResolve(params):
     url = params['url']
     # Sanitize the URL since on some occasions it's a path instead of full address.
     url = url if url.startswith('http') else (BASEURL + (url if url.startswith('/') else '/' + url))
-    r = requestHelper(url.replace('watchcartoononline.io', 'user.wco.tv', 1)) # New domain safety.
+    r = requestHelper(url.replace('wcofun.net', 'user.wco.tv', 1)) # New domain safety.
     content = r.content
 
     if six.PY3:
@@ -2280,11 +2279,9 @@ def requestHelper(url, data=None, extraHeaders=None):
 
     startTime = time()
 
-    # force mount adapter
-    s.mount('https://', tls_adapters[0])
 
     status = 0
-    i = 1
+    i = 0
 
 #Mod by Christian Haitian starts here
     while status != 200 and i < 2:
@@ -2301,7 +2298,7 @@ def requestHelper(url, data=None, extraHeaders=None):
         if status != 200:
 
             if status == 403 and 'cloudflare' == response.headers.get('server', ''):
-                s.mount('https://', tls_adapters[i])
+                s.mount(BASEURL, tls_adapters[i])
             i += 1
 
 #Mod by Christian Haitian ends here
