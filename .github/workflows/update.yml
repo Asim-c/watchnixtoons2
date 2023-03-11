@@ -8,6 +8,9 @@ on:
   workflow_dispatch:
     # Inputs the workflow accepts.  This is where changes will be noted and added to the addon.xml file later.
     inputs:
+      change_version:
+        description: 'Version'
+        required: false
       change_note1:
         description: 'Change #1'
 #       default: ''
@@ -55,7 +58,11 @@ jobs:
         echo "cur_version=$cur_version" >> $GITHUB_ENV
 
         # Set net version to be inserted into addon.xml later and make it available in the environment for later use
-        new_version=$(echo $cur_version | awk '{print $1+0.01}')
+        if [ ! -z "${{ github.event.inputs.change_version }}" ]; then
+           new_version="${{ github.event.inputs.change_version }}"
+        else
+           new_version=$(echo $cur_version | awk '{print $1+0.01}')
+        fi
         echo "new_version=$new_version" >> $GITHUB_ENV
 
         if [[ ${GITHUB_REF##*/} == "master" ]]; then
