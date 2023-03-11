@@ -4,6 +4,7 @@ import sys, ssl
 from requests import Session, get, post, head, exceptions
 import six
 import os #added by Christian Haitian
+from cloudscraper import * #added by Christian Haitian
 
 try:  #added by Christian Haitian
   import cPickle as pickle  #added by Christian Haitian
@@ -69,7 +70,7 @@ ADDON = xbmcaddon.Addon()
 if (not (ADDON.getSetting('watchnixtoons2.name') and not ADDON.getSetting('watchnixtoons2.name').isspace())):
     BASEURL = 'https://www.wcofun.com'
 else:
-    BASEURL = 'https://user.wco.tv'
+    BASEURL = 'https://www.wcopremium.tv'
 #Mod by Christian Haitian ends here
 
 # Due to a recent bug on the server end, the mobile URL is now only used on 'makeLatestCatalog()'.
@@ -89,14 +90,14 @@ PROPERTY_URL_CACHE_QUOTE = 'wnt2.URLCacheQuote'
 
 #Mod by Christian Haitian starts here
 #Define addon plugin directory
-if BASEURL == 'https://user.wco.tv':
+if BASEURL == 'https://www.wcopremium.tv':
     Data_Dir = os.path.join(xbmcaddon.Addon().getAddonInfo('path'))
     login = ADDON.getSetting('watchnixtoons2.name')
     password = ADDON.getSetting('watchnixtoons2.password')
 # Assuming two cookies are used for persistent login.
 # (Find it by tracing the login process)
-    persistentCookieNames = ['wordpress_sec_231de03aca492828e4d084c4d94c5935', 'wordpress_logged_in_231de03aca492828e4d084c4d94c5935']
-    URL = 'https://user.wco.tv'
+    persistentCookieNames = ['wordpress_sec_52ae307e0b9e736a7dbf74030de2e01a', 'wordpress_logged_in_52ae307e0b9e736a7dbf74030de2e01a']
+    URL = 'https://www.wcopremium.tv'
     urlData = urlparse(URL)
 #Downloaded wco cookie will be stored addon plugin directory
     cookieFile = Data_Dir + osSeparator + urlData.netloc + '.cookie'
@@ -114,12 +115,15 @@ if BASEURL == 'https://user.wco.tv':
                 session.cookies.update(pickle.load(f))
         except Exception:
         # If could not load cookies from file, get the new ones by login in
+            scraper = CloudScraper.create_scraper()
+            tokens = scraper.get(URL).cookies.get_dict()
             post = session.post(
                 signinUrl,
                 data={
                     'log': login,
                     'pwd': password,
-                    }
+                    },
+				headers=tokens
             )
             try:
                 with open(cookieFile, 'wb') as f:
@@ -149,7 +153,7 @@ ADDON_ICON = ADDON.getAddonInfo('icon')
 ADDON_FANART = os.path.join(xbmcaddon.Addon().getAddonInfo('path')) + osSeparator + 'fanart.jpg'
 ADDON_ICON_DICT = {'icon': ADDON_ICON, 'thumb': ADDON_ICON, 'poster': ADDON_ICON, 'fanart': ADDON_FANART}
 RESOURCE_URL = 'special://home/addons/{0}resources/'.format(PLUGIN_NAME)
-ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2/resources/traktIcon.png'
+ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2.kodi19/resources/traktIcon.png'
 # Uses URL to get fan art for videos
 ADDON_VIDEO_FANART = ADDON.getSetting('showVideoFanart') == 'true'
 
@@ -182,39 +186,23 @@ def actionMenu(params):
         item_set_info( item, {'title': title, 'plot': title} )
         return (buildURL(data), item, True)
 
-    if BASEURL == 'https://user.wco.tv':
-       xbmcplugin.addDirectoryItems(
-           PLUGIN_ID,
-           (
-               _menuItem('Latest Releases', {'action': 'actionCatalogMenu', 'path': URL_PATHS['latest']}, 'mediumaquamarine'),
-               _menuItem( # Make the Latest Movies menu go straight to the item list, no catalog.
-                   'Latest Movies', {'action': 'actionLatestMoviesMenu', 'path': URL_PATHS['latestmovies']}, 'mediumaquamarine'
-               ),
-               _menuItem('Popular & Ongoing Series', {'action': 'actionCatalogMenu', 'path': URL_PATHS['popular']}, 'mediumaquamarine'),
-               _menuItem('Dubbed Anime', {'action': 'actionCatalogMenu', 'path': URL_PATHS['dubbed']}, 'lightgreen'),
-               _menuItem('Cartoons', {'action': 'actionCatalogMenu', 'path': URL_PATHS['cartoons']}, 'lightgreen'),
-               _menuItem('Subbed Anime', {'action': 'actionCatalogMenu', 'path': URL_PATHS['subbed']}, 'lightgreen'),
-               _menuItem('Movies', {'action': 'actionCatalogMenu', 'path': URL_PATHS['movies']}, 'lightgreen'),
-               _menuItem('OVA Series', {'action': 'actionCatalogMenu', 'path': URL_PATHS['ova']}, 'lightgreen'),
-               _menuItem('Search', {'action': 'actionSearchMenu',  'path': 'search'}, 'lavender'), # Non-web path.
-               _menuItem('Settings', {'action': 'actionShowSettings','path': 'settings'}, 'lavender') # Non-web path.
-           )
-       )
-    else:
-       xbmcplugin.addDirectoryItems(
-           PLUGIN_ID,
-           (
-               _menuItem('Latest Releases', {'action': 'actionCatalogMenu', 'path': URL_PATHS['latest']}, 'mediumaquamarine'),
-               _menuItem('Popular & Ongoing Series', {'action': 'actionCatalogMenu', 'path': URL_PATHS['popular']}, 'mediumaquamarine'),
-               _menuItem('Dubbed Anime', {'action': 'actionCatalogMenu', 'path': URL_PATHS['dubbed']}, 'lightgreen'),
-               _menuItem('Cartoons', {'action': 'actionCatalogMenu', 'path': URL_PATHS['cartoons']}, 'lightgreen'),
-               _menuItem('Subbed Anime', {'action': 'actionCatalogMenu', 'path': URL_PATHS['subbed']}, 'lightgreen'),
-               _menuItem('Movies', {'action': 'actionCatalogMenu', 'path': URL_PATHS['movies']}, 'lightgreen'),
-               _menuItem('OVA Series', {'action': 'actionCatalogMenu', 'path': URL_PATHS['ova']}, 'lightgreen'),
-               _menuItem('Search', {'action': 'actionSearchMenu',  'path': 'search'}, 'lavender'), # Non-web path.
-               _menuItem('Settings', {'action': 'actionShowSettings','path': 'settings'}, 'lavender') # Non-web path.
-           )
-       )
+    xbmcplugin.addDirectoryItems(
+        PLUGIN_ID,
+        (
+            _menuItem('Latest Releases', {'action': 'actionCatalogMenu', 'path': URL_PATHS['latest']}, 'mediumaquamarine'),
+            _menuItem( # Make the Latest Movies menu go straight to the item list, no catalog.
+                'Latest Movies', {'action': 'actionLatestMoviesMenu', 'path': URL_PATHS['latestmovies']}, 'mediumaquamarine'
+            ),
+            _menuItem('Popular & Ongoing Series', {'action': 'actionCatalogMenu', 'path': URL_PATHS['popular']}, 'mediumaquamarine'),
+            _menuItem('Dubbed Anime', {'action': 'actionCatalogMenu', 'path': URL_PATHS['dubbed']}, 'lightgreen'),
+            _menuItem('Cartoons', {'action': 'actionCatalogMenu', 'path': URL_PATHS['cartoons']}, 'lightgreen'),
+            _menuItem('Subbed Anime', {'action': 'actionCatalogMenu', 'path': URL_PATHS['subbed']}, 'lightgreen'),
+            _menuItem('Movies', {'action': 'actionCatalogMenu', 'path': URL_PATHS['movies']}, 'lightgreen'),
+            _menuItem('OVA Series', {'action': 'actionCatalogMenu', 'path': URL_PATHS['ova']}, 'lightgreen'),
+            _menuItem('Search', {'action': 'actionSearchMenu',  'path': 'search'}, 'lavender'), # Non-web path.
+            _menuItem('Settings', {'action': 'actionShowSettings','path': 'settings'}, 'lavender') # Non-web path.
+        )
+    )
     xbmcplugin.endOfDirectory(PLUGIN_ID)
 
 
@@ -230,7 +218,7 @@ def actionCatalogMenu(params):
                 # these images don't have to be distributed w/ the add-on, if they're not needed).
                 # After they're downloaded, the images exist in Kodi's image cache folders.
                 THUMBS_BASEURL = 'https://doko-desuka.github.io/128h/'
-                artDict = {'thumb': None, 'fanart': ADDON_FANART}
+                artDict = {'thumb': None}
                 miscItem = None
                 for sectionName in sorted(catalog.keys()):
                     if catalog[sectionName]:
@@ -298,7 +286,7 @@ def actionCatalogSection(params):
     # Items in these catalogs link to the video player pages already.
     isSpecial = (
         path in {URL_PATHS['ova'], URL_PATHS['movies'], URL_PATHS['latest']}
-        or params.get('searchType', 'series') != 'series' # not series = movies or episodes search
+        or params.get('searchType', 'series') not in {'series', 'genres'} # not series = movies or episodes search
     )
 
     if isSpecial:
@@ -312,7 +300,7 @@ def actionCatalogSection(params):
     if path != URL_PATHS['latest'] or not ADDON_LATEST_THUMBS:
         artDict = {'icon': thumb, 'thumb': thumb, 'poster': thumb} if thumb else None
     else:
-        artDict = {'icon': thumb, 'thumb': 'DefaultVideo.png', 'poster': 'DefaultVideo.png', 'fanart': thumb} if thumb else None
+        artDict = {'icon': thumb, 'thumb': 'DefaultVideo.png', 'poster': 'DefaultVideo.png'} if thumb else None
 
     # Persistent property with item metadata, used with the "Show Information" context menu.
     infoItems = getWindowProperty(PROPERTY_INFO_ITEMS) or { }
@@ -389,9 +377,9 @@ def actionCatalogSection(params):
 
             # If there's metadata for this entry (requested by the user with "Show Information"), use it.
             if entryURL in infoItems:
-                    entryParams = None
-                    itemPlot, itemThumb = infoItems[entryURL]
-                    entryArt = {'icon': ADDON_ICON, 'thumb': itemThumb, 'poster': itemThumb}
+                entryParams = None
+                itemPlot, itemThumb = infoItems[entryURL]
+                entryArt = {'icon': ADDON_ICON, 'thumb': itemThumb, 'poster': itemThumb}
             else:
 
                 # do this here so we only need to create a hash once per entry
@@ -411,15 +399,15 @@ def actionCatalogSection(params):
                 itemPlot = ''
                 entryParams = params
 
-                # add fanart if option is selected
-                if show_fanart:
-                    entryArt['fanart'] = IMAGES_URL + '/thumbs' + entryURL + '.jpg'
+            # add fanart if option is selected
+            if show_fanart:
+                entryArt['fanart'] = IMAGES_URL + '/thumbs' + entryURL + '.jpg'
 
-                yield (
-                    buildURL({'action': action, 'url': entryURL}),
-                    listItemFunc(entry[1], entryURL, entryArt, itemPlot, isFolder, isSpecial, entryParams),
-                    isFolder
-                )
+            yield (
+                buildURL({'action': action, 'url': entryURL}),
+                listItemFunc(entry[1], entryURL, entryArt, itemPlot, isFolder, isSpecial, entryParams),
+                isFolder
+            )
 
     xbmcplugin.addDirectoryItems(PLUGIN_ID, tuple(_sectionItemsGen()))
     xbmcplugin.endOfDirectory(PLUGIN_ID)
@@ -444,11 +432,11 @@ def actionEpisodesMenu(params):
         URLCacheQuote = {}
         # New domain safety replace, in case the user is coming in from an old Kodi favorite item.
         if BASEURL == 'https://www.wcofun.com':
-           url = params['url'].replace('user.wco.tv', 'www.wcofun.com', 1)
+           url = params['url'].replace('www.wcopremium.tv', 'www.wcofun.com', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
         else:
-           url = params['url'].replace('www.wcofun.com', 'user.wco.tv', 1)
+           url = params['url'].replace('www.wcofun.com', 'www.wcopremium.tv', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
 
@@ -478,7 +466,7 @@ def actionEpisodesMenu(params):
 
         showURL = params['url']
         thumb = listData[0]
-        artDict = {'icon': thumb, 'thumb': thumb, 'poster': thumb, 'fanart': thumb} if thumb else None
+        artDict = {'icon': thumb, 'thumb': thumb, 'poster': thumb} if thumb else None
         plot = listData[1]
 
         listItemFunc = makeListItemClean if ADDON.getSetting('cleanupEpisodes') == 'true' else makeListItem
@@ -509,17 +497,17 @@ def actionEpisodesMenu(params):
 def actionLatestMoviesMenu(params):
     # Returns a list of links from a hidden "/anime/movies" area.
     # Since this page is very large (130 KB), we memory cache it after it's been requested.
-    html = getRawWindowProperty(PROPERTY_LATEST_MOVIES)
-    if not html:
-        r = requestHelper(BASEURL + params['path'])
-        html = r.text
-        setRawWindowProperty(PROPERTY_LATEST_MOVIES, html)
-
+    #html = getRawWindowProperty(PROPERTY_LATEST_MOVIES)
+    #html = ''
+    #if not html:
+    r = requestHelper(BASEURL + params['path'])
+    html = r.text
+    setRawWindowProperty(PROPERTY_LATEST_MOVIES, html)
     # Similar scraping logic to 'actionEpisodesMenu()'.
 
     dataStartIndex = html.find('"sidebar_right3"')
     if dataStartIndex == -1:
-        raise Exception('Latest movies scrape fail: ' + url)
+        raise Exception('Latest movies scrape fail: ' + html)
 
     # Persistent property with item metadata.
     infoItems = getWindowProperty(PROPERTY_INFO_ITEMS) or { }
@@ -557,19 +545,19 @@ def actionLatestMoviesMenu(params):
             if ADDON_VIDEO_FANART:
                 artDict['fanart'] = entryURL.replace( BASEURL, IMAGES_URL + '/thumbs' ) + '.jpg'
 
-                yield (
-                    buildURL({'action': 'actionResolve', 'url': entryURL}),
-                    makeListItem(
-                        unescapeHTMLText(entryTitle),
-                        entryURL,
-                        artDict,
-                        entryPlot,
-                        isFolder = False,
-                        isSpecial = True,
-                        oldParams = entryParams
-                    ),
-                    False
-                )
+            yield (
+                buildURL({'action': 'actionResolve', 'url': entryURL}),
+                makeListItem(
+                    unescapeHTMLText(entryTitle),
+                    entryURL,
+                    artDict,
+                    entryPlot,
+                    isFolder = False,
+                    isSpecial = True,
+                    oldParams = entryParams
+                ),
+                False
+            )
     xbmcplugin.addDirectoryItems(PLUGIN_ID, tuple(_movieItemsGen()))
     xbmcplugin.endOfDirectory(PLUGIN_ID)
     setViewMode()
@@ -721,7 +709,7 @@ def actionGenresMenu(params):
                 buildURL(
                     {
                         'action': 'actionCatalogMenu',
-                        'path': '/search-by-genre/' + match.group(1).rsplit('/', 1)[1],
+                        'path': '/search-by-genre/page/' + match.group(1).rsplit('/', 1)[1],
                         'searchType': 'genres'
                     }
                 ),
@@ -1156,6 +1144,15 @@ def makeListItemClean(title, url, artDict, plot, isFolder, isSpecial, oldParams,
             item_set_info( item, {'mediatype': 'video', 'title': unescapedTitle} )
     else:
         title, season, episode, multiPart, episodeTitle = getTitleInfo(unescapedTitle)
+        # dirty way to ensure is a string
+        # this is due to filters being used, todo for clean-up
+        if six.PY3:
+            if episode:
+                episode = "".join(episode)
+            if season:
+                season = "".join(season)
+            if multiPart:
+                multiPart = "".join(multiPart)
         if episode and episode.isdigit():
             # The clean episode label will have this format: "SxEE Episode Name", with S and EE standing for digits.
             item = xbmcgui.ListItem(
@@ -1404,12 +1401,12 @@ def getCatalogProperty(params):
 
 def actionResolve(params):
 #Mod by Christian Haitian starts here
-   if BASEURL == 'https://user.wco.tv':
+   if BASEURL == 'https://www.wcopremium.tv':
     # Needs to be the BASEURL domain to get multiple video qualities.
     url = params['url']
     # Sanitize the URL since on some occasions it's a path instead of full address.
     url = url if url.startswith('http') else (BASEURL + (url if url.startswith('/') else '/' + url))
-    r = requestHelper(url.replace('wcofun.net', 'user.wco.tv', 1)) # New domain safety.
+    r = requestHelper(url.replace('wcofun.net', 'www.wcopremium.tv', 1)) # New domain safety.
     content = r.content
 
     if six.PY3:
@@ -1503,7 +1500,7 @@ def actionResolve(params):
 
     else: #Check free site in case of a new release that's not on the premium site yet.
      xbmcgui.Dialog().notification('Trying free stream', '')
-     r = requestHelper(url.replace('user.wco.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
+     r = requestHelper(url.replace('www.wcopremium.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
      content = r.content
 
      def _decodeSource(subContent):
@@ -1784,7 +1781,7 @@ def actionResolve(params):
         xbmcplugin.setResolvedUrl(PLUGIN_ID, True, item)
     elif '/inc/embed' in content: #Premium link failed so we'll try the free version now.
      xbmcgui.Dialog().notification('Trying free stream', '')
-     r = requestHelper(url.replace('user.wco.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
+     r = requestHelper(url.replace('www.wcopremium.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
      content = r.content
 
      def _decodeSource(subContent):
@@ -2017,7 +2014,7 @@ def actionResolve(params):
             for char in chars.replace('"', '').split(',')
         )
         try:
-            if BASEURL == 'https://user.wco.tv':
+            if BASEURL == 'https://www.wcopremium.tv':
                 return BASEURL + search(r'src="([^"]+)', iframe).group(1)
             else:
                 returnUrl = search(r'src="([^"]+)', iframe).group(1)
@@ -2055,6 +2052,10 @@ def actionResolve(params):
         else:
             return # User cancelled the chapter selection.
     else:
+        # back-up search index
+        if embedURLIndex <= 0:
+            embedURLPattern = r'class="episode-descp"'
+            embedURLIndex = content.find(embedURLPattern)
         # Normal / single-chapter episode.
         embedURL = _decodeSource(content[embedURLIndex:])
         # User asked to play multiple chapters, but only one chapter/video player found.
@@ -2163,12 +2164,14 @@ def actionResolve(params):
             # This is an attempt to fix the fact that, on newer Kodi versions, the debug log says that there
             # was an SSL failure, with this line in the log (with debug logging activated):
             # "ERROR: CCurlFile::Stat - Failed: SSL peer certificate or SSH remote key was not OK(60)"
-            mediaHead.url = mediaHead.url.replace('https://', 'http://', 1)
+            streamURL = mediaHead.url.replace('https://', 'http://', 1)
+        else:
+            streamURL = mediaHead.url
 
         # Need to use the exact same ListItem name & infolabels when playing or else Kodi replaces that item
         # in the UI listing.
         item = xbmcgui.ListItem(xbmc.getInfoLabel('ListItem.Label'))
-        item.setPath(mediaHead.url + '|' + '&'.join(key+'='+urllib_parse.quote_plus(val) for key, val in MEDIA_HEADERS.items()))
+        item.setPath(streamURL + '|' + '&'.join(key+'='+urllib_parse.quote_plus(val) for key, val in MEDIA_HEADERS.items()))
         item.setMimeType(mediaHead.headers.get('Content-Type', 'video/mp4')) # Avoids Kodi's MIME request.
 
         # When coming in from a Favourite item, there will be no metadata. Try to get at least a title.
@@ -2190,7 +2193,7 @@ def actionResolve(params):
             item_set_info( item,
                 {
                     'tvshowtitle': xbmc.getInfoLabel('ListItem.TVShowTitle'),
-                    'title': itemTitle,
+                    'title': unescapeHTMLText(itemTitle),
                     'season': int(seasonInfoLabel) if seasonInfoLabel.isdigit() else -1,
                     'episode': int(episodeString),
                     'plot': xbmc.getInfoLabel('ListItem.Plot'),
@@ -2200,7 +2203,7 @@ def actionResolve(params):
         else:
             item_set_info( item,
                 {
-                    'title': itemTitle,
+                    'title': unescapeHTMLText(itemTitle),
                     'plot': xbmc.getInfoLabel('ListItem.Plot'),
                     'mediatype': 'movie'
                 }
@@ -2253,15 +2256,16 @@ def getOldDomains():
         'm.watchcartoononline.io',
         'www.thewatchcartoononline.tv',
         'www.wcofun.net'
+        'www.wcofun.com'
     )
 
 
 def solveMediaRedirect(url, headers):
     # Use HEAD requests to fulfill possible 302 redirections.
     # Returns the final stream HEAD response.
-    while 1:
+    while True:
         try:
-            mediaHead = get(
+            mediaHead = s.get(
                 url, stream=True, headers=headers, allow_redirects=False, verify=False, timeout=10
             )
             if 'Location' in mediaHead.headers:
@@ -2301,12 +2305,12 @@ def requestHelper(url, data=None, extraHeaders=None):
 
 #Mod by Christian Haitian starts here
     while status != 200 and i < 2:
-        if data and BASEURL == 'https://user.wco.tv':
+        if data and BASEURL == 'https://www.wcopremium.tv':
             response = session.post(url, data=data, headers=myHeaders, verify=False, timeout=10)
         elif data and BASEURL == 'https://www.wcofun.com':
             response = s.post(url, data=data, headers=myHeaders, verify=False, cookies=cookieDict, timeout=10)
         else:
-             if BASEURL == 'https://user.wco.tv' and 'last-50-recent-release' not in url: 
+             if BASEURL == 'https://www.wcopremium.tv' and 'last-50-recent-release' not in url: 
                  response = session.get(url, headers=myHeaders, verify=False, timeout=10)
              else:
                  response = s.get(url, headers=myHeaders, verify=False, cookies=cookieDict, timeout=10)
@@ -2314,7 +2318,7 @@ def requestHelper(url, data=None, extraHeaders=None):
         if status != 200:
 
             if status == 403 and 'cloudflare' == response.headers.get('server', ''):
-                s.mount(BASEURL, tls_adapters[i])
+                s.mount(url, tls_adapters[i])
             i += 1
 
 #Mod by Christian Haitian ends here
