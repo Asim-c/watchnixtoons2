@@ -68,7 +68,7 @@ PLUGIN_TITLE = 'WatchNixtoons2'
 #Mod by Christian Haitian starts here
 ADDON = xbmcaddon.Addon()
 if (not (ADDON.getSetting('watchnixtoons2.name') and not ADDON.getSetting('watchnixtoons2.name').isspace())):
-    BASEURL = 'https://www.wcofun.com'
+    BASEURL = 'https://www.wcofun.org'
 else:
     BASEURL = 'https://www.wcopremium.tv'
 #Mod by Christian Haitian ends here
@@ -158,7 +158,7 @@ ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2.kodi19/res
 ADDON_VIDEO_FANART = ADDON.getSetting('showVideoFanart') == 'true'
 
 # To let the source website know it's this plugin. Also used inside "makeLatestCatalog()" and "actionResolve()".
-WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
+WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
 
 MEDIA_HEADERS = None # Initialized in 'actionResolve()'.
 
@@ -431,12 +431,13 @@ def actionEpisodesMenu(params):
         URLCache = {}
         URLCacheQuote = {}
         # New domain safety replace, in case the user is coming in from an old Kodi favorite item.
-        if BASEURL == 'https://www.wcofun.com':
-           url = params['url'].replace('www.wcopremium.tv', 'www.wcofun.com', 1)
+        if BASEURL == 'https://www.wcofun.org':
+           url = params['url'].replace('www.wcopremium.tv', 'www.wcofun.org', 1)
+           url = params['url'].replace('wcofun.com', 'wcofun.org', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
         else:
-           url = params['url'].replace('www.wcofun.com', 'www.wcopremium.tv', 1)
+           url = params['url'].replace('www.wcofun.org', 'www.wcopremium.tv', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
 
@@ -1360,7 +1361,7 @@ def makeGenericCatalog(params):
     return catalogFromIterable(
         match.groups()
         for match in finditer(
-            '''<li><a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('</div>', dataStartIndex)]
+            '''<li><a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('</script>', dataStartIndex)]
         )
     )
 
@@ -1406,7 +1407,7 @@ def actionResolve(params):
     url = params['url']
     # Sanitize the URL since on some occasions it's a path instead of full address.
     url = url if url.startswith('http') else (BASEURL + (url if url.startswith('/') else '/' + url))
-    r = requestHelper(url.replace('wcofun.net', 'www.wcopremium.tv', 1)) # New domain safety.
+    r = requestHelper(url.replace('wcofun.org', 'www.wcopremium.tv', 1)) # New domain safety.
     content = r.content
 
     if six.PY3:
@@ -1500,7 +1501,7 @@ def actionResolve(params):
 
     else: #Check free site in case of a new release that's not on the premium site yet.
      xbmcgui.Dialog().notification('Trying free stream', '')
-     r = requestHelper(url.replace('www.wcopremium.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
+     r = requestHelper(url.replace('www.wcopremium.tv', 'www.wcofun.org', 1)) # Change from premium site to free site
      content = r.content
 
      def _decodeSource(subContent):
@@ -1781,7 +1782,7 @@ def actionResolve(params):
         xbmcplugin.setResolvedUrl(PLUGIN_ID, True, item)
     elif '/inc/embed' in content: #Premium link failed so we'll try the free version now.
      xbmcgui.Dialog().notification('Trying free stream', '')
-     r = requestHelper(url.replace('www.wcopremium.tv', 'www.wcofun.com', 1)) # Change from premium site to free site
+     r = requestHelper(url.replace('www.wcopremium.tv', 'www.wcofun.org', 1)) # Change from premium site to free site
      content = r.content
 
      def _decodeSource(subContent):
@@ -1999,7 +2000,7 @@ def actionResolve(params):
     url = params['url']
     # Sanitize the URL since on some occasions it's a path instead of full address.
     url = url if url.startswith('http') else (BASEURL + (url if url.startswith('/') else '/' + url))
-    r = requestHelper(url.replace('watchcartoononline.io', 'wcofun.com', 1)) # New domain safety.
+    r = requestHelper(url.replace('watchcartoononline.io', 'wcofun.org', 1)) # New domain safety.
     content = r.content
 
     def _decodeSource(subContent):
@@ -2250,13 +2251,13 @@ def getThumbnailHeaders():
 def getOldDomains():
     # Old possible domains, in the order of likeliness.
     return (
+        'www.wcofun.com',
+        'www.wcofun.net',
         'www.wcostream.com',
         'm.wcostream.com',
         'www.watchcartoononline.io',
         'm.watchcartoononline.io',
-        'www.thewatchcartoononline.tv',
-        'www.wcofun.net'
-        'www.wcofun.com'
+        'www.thewatchcartoononline.tv'
     )
 
 
