@@ -902,7 +902,7 @@ def actionUpdateFavourites(params):
             file = xbmcvfs.File(FAVOURITES_PATH, 'w')
             file.write(favoritesText)
             file.close()
-        except:
+        except Exception:
             try:
                 # Try again, in case this was some weird encoding error and not a write-permission error.
                 file = xbmcvfs.File(FAVOURITES_PATH, 'w')
@@ -1361,7 +1361,7 @@ def makeGenericCatalog(params):
     return catalogFromIterable(
         match.groups()
         for match in finditer(
-            '''<li><a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('</script>', dataStartIndex)]
+            '''<li(?:\sclass=\"tooltip\")?>\s*<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('<script>', dataStartIndex)]
         )
     )
 
