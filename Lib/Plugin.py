@@ -1361,7 +1361,7 @@ def makeGenericCatalog(params):
     return catalogFromIterable(
         match.groups()
         for match in finditer(
-            '''<li(?:\sclass=\"tooltip\")?>\s*<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('<script>', dataStartIndex)]
+            '''<li(?:\sdata\-id=\"[0-9]+\")?>\s*<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('<script>', dataStartIndex)]
         )
     )
 
