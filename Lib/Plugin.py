@@ -1507,14 +1507,18 @@ def actionResolve(params):
      def _decodeSource(subContent):
         if six.PY3:
             subContent = str(subContent)
-        chars = subContent[subContent.find('[') : subContent.find(']')]
-        spread = int(search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
-        iframe = ''.join(
-            chr(
-                int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
+        try:
+            chars = subContent[subContent.find('[') : subContent.find(']')]
+            spread = int(search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
+            iframe = ''.join(
+                chr(
+                    int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
+                )
+                for char in chars.replace('"', '').split(',')
             )
-            for char in chars.replace('"', '').split(',')
-        )
+        except Exception:
+            # quick dirty fix
+            iframe = subContent
         try:
             returnUrl = search(r'src="([^"]+)', iframe).group(1)
             if not returnUrl.startswith('\\') and not returnUrl.startswith('http'):
@@ -1788,14 +1792,18 @@ def actionResolve(params):
      def _decodeSource(subContent):
         if six.PY3:
             subContent = str(subContent)
-        chars = subContent[subContent.find('[') : subContent.find(']')]
-        spread = int(search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
-        iframe = ''.join(
-            chr(
-                int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
+        try:
+            chars = subContent[subContent.find('[') : subContent.find(']')]
+            spread = int(search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
+            iframe = ''.join(
+                chr(
+                    int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
+                )
+                for char in chars.replace('"', '').split(',')
             )
-            for char in chars.replace('"', '').split(',')
-        )
+        except Exception:
+            # quick dirty fix
+            iframe = subContent
         try:
            returnUrl = search(r'src="([^"]+)', iframe).group(1)
            if not returnUrl.startswith('\\') and not returnUrl.startswith('http'):
@@ -2006,14 +2014,18 @@ def actionResolve(params):
     def _decodeSource(subContent):
         if six.PY3:
             subContent = str(subContent)
-        chars = subContent[subContent.find('[') : subContent.find(']')]
-        spread = int(search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
-        iframe = ''.join(
-            chr(
-                int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
+        try:
+            chars = subContent[subContent.find('[') : subContent.find(']')]
+            spread = int(search(r' - (\d+)\)\; }', subContent[subContent.find(' - '):]).group(1))
+            iframe = ''.join(
+                chr(
+                    int(''.join(c for c in str(b64decode(char)) if c.isdigit())) - spread
+                )
+                for char in chars.replace('"', '').split(',')
             )
-            for char in chars.replace('"', '').split(',')
-        )
+        except Exception:
+            # quick dirty fix
+            iframe = subContent
         try:
             if BASEURL == 'https://www.wcopremium.tv':
                 return BASEURL + search(r'src="([^"]+)', iframe).group(1)
