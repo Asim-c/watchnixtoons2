@@ -68,7 +68,7 @@ PLUGIN_TITLE = 'WatchNixtoons2'
 #Mod by Christian Haitian starts here
 ADDON = xbmcaddon.Addon()
 if (not (ADDON.getSetting('watchnixtoons2.name') and not ADDON.getSetting('watchnixtoons2.name').isspace())):
-    BASEURL = 'https://www.wcofun.org'
+    BASEURL = 'https://www.wcofun.tv'
 else:
     BASEURL = 'https://www.wcopremium.tv'
 #Mod by Christian Haitian ends here
@@ -158,7 +158,7 @@ ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2.kodi19/res
 ADDON_VIDEO_FANART = ADDON.getSetting('showVideoFanart') == 'true'
 
 # To let the source website know it's this plugin. Also used inside "makeLatestCatalog()" and "actionResolve()".
-WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
 
 MEDIA_HEADERS = None # Initialized in 'actionResolve()'.
 
@@ -431,9 +431,10 @@ def actionEpisodesMenu(params):
         URLCache = {}
         URLCacheQuote = {}
         # New domain safety replace, in case the user is coming in from an old Kodi favorite item.
-        if BASEURL == 'https://www.wcofun.org':
-           url = params['url'].replace('www.wcopremium.tv', 'www.wcofun.org', 1)
-           url = params['url'].replace('wcofun.com', 'wcofun.org', 1)
+        if BASEURL == 'https://www.wcofun.tv':
+           url = params['url'].replace('www.wcofun.org', 'www.wcofun.tv', 1)
+           url = params['url'].replace('www.wcopremium.tv', 'www.wcofun.tv', 1)
+           url = params['url'].replace('wcofun.com', 'wcofun.tv', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
         else:
@@ -2039,6 +2040,14 @@ def actionResolve(params):
 
     embedURL = None
 
+    # Notify about premium only video
+    if b'This Video is For the WCO Premium Users Only' in content:
+        xbmcgui.Dialog().ok(
+            PLUGIN_TITLE + ' Fail',
+            'The video has been marked as "only for premium users".'
+        )
+        return
+
     # On rare cases an episode might have several "chapters", which are video players on the page.
     embedURLPattern = b'onclick="myFunction'
     embedURLIndex = content.find(embedURLPattern)
@@ -2263,6 +2272,7 @@ def getThumbnailHeaders():
 def getOldDomains():
     # Old possible domains, in the order of likeliness.
     return (
+        'www.wcofun.org',
         'www.wcofun.com',
         'www.wcofun.net',
         'www.wcostream.com',
