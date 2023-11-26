@@ -71,6 +71,8 @@ if (not (ADDON.getSetting('watchnixtoons2.name') and not ADDON.getSetting('watch
     BASEURL = 'https://www.wcofun.tv'
 else:
     BASEURL = 'https://www.wcopremium.tv'
+
+WORKAROUND_BASEURL = 'https://www.wcostream.tv'
 #Mod by Christian Haitian ends here
 
 # Due to a recent bug on the server end, the mobile URL is now only used on 'makeLatestCatalog()'.
@@ -158,7 +160,7 @@ ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2.kodi19/res
 ADDON_VIDEO_FANART = ADDON.getSetting('showVideoFanart') == 'true'
 
 # To let the source website know it's this plugin. Also used inside "makeLatestCatalog()" and "actionResolve()".
-WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
+WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
 
 MEDIA_HEADERS = None # Initialized in 'actionResolve()'.
 
@@ -2039,14 +2041,29 @@ def actionResolve(params):
             return None # Probably a temporary block, or change in embedded code.
 
     embedURL = None
+    streamURL = None
 
-    # Notify about premium only video
+    # check if is a premium only video
     if b'This Video is For the WCO Premium Users Only' in content:
-        xbmcgui.Dialog().ok(
-            PLUGIN_TITLE + ' Fail',
-            'The video has been marked as "only for premium users".'
-        )
-        return
+
+        xbmcDebug( 'Premium video detected, attempting to work around for domain: ' + BASEURL )
+        new_r = requestHelper(url.replace(BASEURL, WORKAROUND_BASEURL, 1))
+        new_content = new_r.content
+        is_premium = premium_workaround_check( new_content.decode('utf-8') )
+
+        if is_premium is False:
+            xbmcDebug( 'Premium video workaround failed' )
+            # Notify about premium only video
+            xbmcgui.Dialog().ok(
+                PLUGIN_TITLE + ' Fail',
+                'The video has been marked as "only for premium users".'
+            )
+            return
+
+        xbmcDebug( 'Premium video workaround success' )
+        streamURL = is_premium
+        html = new_content.decode('utf-8')
+
 
     # On rare cases an episode might have several "chapters", which are video players on the page.
     embedURLPattern = b'onclick="myFunction'
@@ -2094,13 +2111,14 @@ def actionResolve(params):
         return
 
     # Request the embedded player page.
-    r2 = requestHelper(unescapeHTMLText(embedURL), # Sometimes a '&#038;' symbol is present in this URL.
-            data = None,
-            extraHeaders = {
-                'User-Agent': WNT2_USER_AGENT, 'Accept': '*/*', 'Referer': embedURL, 'X-Requested-With': 'XMLHttpRequest'
-            }
-    )
-    html = r2.text
+    if not streamURL:
+         r2 = requestHelper(unescapeHTMLText(embedURL), # Sometimes a '&#038;' symbol is present in this URL.
+                 data = None,
+                 extraHeaders = {
+                     'User-Agent': WNT2_USER_AGENT, 'Accept': '*/*', 'Referer': embedURL, 'X-Requested-With': 'XMLHttpRequest'
+                 }
+         )
+         html = r2.text
 
     # Find the stream URLs.
     if 'getvid?evid' in html:
@@ -2132,6 +2150,9 @@ def actionResolve(params):
             sourceURLs.append(('720 (HD)', sourceBaseURL + hdToken))
         # Use the same backup stream method as the source: cdn domain + SD stream.
         backupURL = jsonData.get('cdn', '') + '/getvid?evid=' + (sdToken or hdToken)
+    elif streamURL:
+        sourceURLs = [ ]
+        sourceURLs.append(('480 (SD)', streamURL))
     else:
         # Alternative video player page, with plain stream links in the JWPlayer javascript.
         sourcesBlock = search('sources:\s*?\[(.*?)\]', html, DOTALL).group(1)
@@ -2282,6 +2303,25 @@ def getOldDomains():
         'www.thewatchcartoononline.tv'
     )
 
+def premium_workaround_check( html ):
+
+    """ checks if there is a work around for current domain """
+
+    # get playlist link
+    playlist_url = search(r'<a href="([^"]+)">Watch on Playlist</a>', html).group(1)
+
+    if playlist_url:
+        html = requestHelper(playlist_url if playlist_url.startswith('http') else WORKAROUND_BASEURL + playlist_url).text
+        guid = search(r'if\(liste\[i\]\[\"mediaid\"\] == ([0-9]+)\) {', html).group(1)
+        if guid:
+            playlist_url = search(r'playlist: \"(/playlist-cat-rss/[0-9]+\?[^\"]+)\",', html).group(1)
+            if playlist_url:
+                rss = requestHelper(playlist_url if playlist_url.startswith('http') else WORKAROUND_BASEURL + playlist_url).text
+                video_url = search(r'<guid>' + six.ensure_str( guid ) + r'</guid>\s*<jwplayer:image>(?:[^<]+)</jwplayer:image>\s*<jwplayer:source file=\"([^\"]+)\"', rss).group(1)
+                if video_url:
+                    return video_url
+
+    return False
 
 def solveMediaRedirect(url, headers):
     # Use HEAD requests to fulfill possible 302 redirections.
@@ -2330,7 +2370,7 @@ def requestHelper(url, data=None, extraHeaders=None):
     while status != 200 and i < 2:
         if data and BASEURL == 'https://www.wcopremium.tv':
             response = session.post(url, data=data, headers=myHeaders, verify=False, timeout=10)
-        elif data and BASEURL == 'https://www.wcofun.com':
+        elif data and BASEURL == 'https://www.wcofun.tv':
             response = s.post(url, data=data, headers=myHeaders, verify=False, cookies=cookieDict, timeout=10)
         else:
              if BASEURL == 'https://www.wcopremium.tv' and 'last-50-recent-release' not in url: 
