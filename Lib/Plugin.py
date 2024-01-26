@@ -68,7 +68,7 @@ PLUGIN_TITLE = 'WatchNixtoons2'
 #Mod by Christian Haitian starts here
 ADDON = xbmcaddon.Addon()
 if (not (ADDON.getSetting('watchnixtoons2.name') and not ADDON.getSetting('watchnixtoons2.name').isspace())):
-    BASEURL = 'https://www.wcofun.tv'
+    BASEURL = 'https://www.wcofun.net'
 else:
     BASEURL = 'https://www.wcopremium.tv'
 
@@ -433,14 +433,14 @@ def actionEpisodesMenu(params):
         URLCache = {}
         URLCacheQuote = {}
         # New domain safety replace, in case the user is coming in from an old Kodi favorite item.
-        if BASEURL == 'https://www.wcofun.tv':
-           url = params['url'].replace('www.wcofun.org', 'www.wcofun.tv', 1)
-           url = params['url'].replace('www.wcopremium.tv', 'www.wcofun.tv', 1)
-           url = params['url'].replace('wcofun.com', 'wcofun.tv', 1)
+        if BASEURL == 'https://www.wcofun.net':
+           url = params['url'].replace('www.wcofun.org', 'www.wcofun.net', 1)
+           url = params['url'].replace('www.wcopremium.tv', 'www.wcofun.net', 1)
+           url = params['url'].replace('wcofun.com', 'wcofun.net', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
         else:
-           url = params['url'].replace('www.wcofun.org', 'www.wcopremium.tv', 1)
+           url = params['url'].replace('www.wcofun.org', 'www.wcopremium.net', 1)
            r = requestHelper(url if url.startswith('http') else BASEURL + url)
            html = r.text
 
@@ -2293,6 +2293,7 @@ def getThumbnailHeaders():
 def getOldDomains():
     # Old possible domains, in the order of likeliness.
     return (
+        'www.wcofun.tv',
         'www.wcofun.org',
         'www.wcofun.com',
         'www.wcofun.net',
@@ -2370,7 +2371,7 @@ def requestHelper(url, data=None, extraHeaders=None):
     while status != 200 and i < 2:
         if data and BASEURL == 'https://www.wcopremium.tv':
             response = session.post(url, data=data, headers=myHeaders, verify=False, timeout=10)
-        elif data and BASEURL == 'https://www.wcofun.tv':
+        elif data and BASEURL == 'https://www.wcofun.net':
             response = s.post(url, data=data, headers=myHeaders, verify=False, cookies=cookieDict, timeout=10)
         else:
              if BASEURL == 'https://www.wcopremium.tv' and 'last-50-recent-release' not in url: 
