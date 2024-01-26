@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from re import compile, findall, finditer, search, DOTALL
+from re import compile, findall, finditer, search, DOTALL, MULTILINE
 import sys, ssl
 from requests import Session, get, post, head, exceptions
 import six
@@ -35,6 +35,7 @@ if six.PY3:
 
 from Lib.Common import *
 from Lib.SimpleTrakt import SimpleTrakt
+from Lib.sites.sites import *
 
 # Disable urllib3's "InsecureRequestWarning: Unverified HTTPS request is being made" warnings
 import requests
@@ -446,7 +447,7 @@ def actionEpisodesMenu(params):
 
         plot, thumb = getPageMetadata(html)
 
-        dataStartIndex = html.find('"sidebar_right3"')
+        dataStartIndex = html.find( SITE_SETTINGS[ 'episode' ][ 'start' ] )
         if dataStartIndex == -1:
             raise Exception('Episode list scrape fail: ' + url)
 
@@ -457,7 +458,7 @@ def actionEpisodesMenu(params):
             tuple(
                 match.groups()
                 for match in finditer(
-                    '''<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('"sidebar-all"')]
+                    SITE_SETTINGS[ 'episode' ][ 'regex' ], html[dataStartIndex : html.find( SITE_SETTINGS[ 'episode' ][ 'end' ] )]
                 )
             )
         )
@@ -523,7 +524,7 @@ def actionLatestMoviesMenu(params):
 
     def _movieItemsGen():
         reIter = finditer(
-            '''<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('"sidebar-all"')]
+            SITE_SETTINGS[ 'latest_movies' ][ 'regex' ], html[dataStartIndex : html.find( SITE_SETTINGS[ 'latest_movies' ][ 'end' ] )]
         )
         # The page has like 6000 items going back to 2010, so we limit to only the latest 200.
         for x in xrange(200):
@@ -720,7 +721,7 @@ def actionGenresMenu(params):
                 xbmcgui.ListItem(match.group(2)),
                 True
             )
-            for match in finditer('''<a.*?"([^"]+).*?>(.*?)</''', html[dataStartIndex : html.find(r'</div></div>')])
+            for match in re.finditer( SITE_SETTINGS[ 'genre' ][ 'regex' ], html[dataStartIndex : html.find( SITE_SETTINGS[ 'genre' ][ 'end' ] )])
         )
     )
     xbmcplugin.endOfDirectory(PLUGIN_ID)
@@ -965,9 +966,9 @@ def actionShowSettings(params):
 
 def getPageMetadata(html):
     # If we're on an episode or (old) movie page, see if there's a parent page with the actual metadata.
-    stringStartIndex = html.find('"header-tag"')
+    stringStartIndex = html.find( SITE_SETTINGS[ 'page_meta' ][ 'start' ] )
     if stringStartIndex != -1:
-        parentURL = search('href="([^"]+)', html[stringStartIndex:]).group(1)
+        parentURL = search( SITE_SETTINGS[ 'page_meta' ][ 'regex' ], html[stringStartIndex:] ).group(1)
         if '/anime/movies' not in parentURL:
             r = requestHelper(parentURL if parentURL.startswith('http') else BASEURL + parentURL)
             if r.ok:
@@ -975,7 +976,7 @@ def getPageMetadata(html):
 
     # Thumbnail scraping.
     thumb = ''
-    stringStartIndex = html.find('og:image" content="')
+    stringStartIndex = html.find( SITE_SETTINGS[ 'thumbnail' ][ 'start' ] )
     if stringStartIndex != -1:
         thumbPath = html[stringStartIndex+19 : html.find('"', stringStartIndex+19)] # 19 = len('og:image" content="')
         if thumbPath:
@@ -992,9 +993,9 @@ def getPageMetadata(html):
 
     # (Show) plot scraping.
     plot = ''
-    stringStartIndex = html.find('Info:')
+    stringStartIndex = html.find( SITE_SETTINGS[ 'page_plot' ][ 'start' ] )
     if stringStartIndex != -1:
-        match = search('</h3>\s*<p>(.*?)</p>', html[stringStartIndex:], DOTALL)
+        match = search( SITE_SETTINGS[ 'page_plot' ][ 'regex' ], html[stringStartIndex:], DOTALL)
         plot = unescapeHTMLText(match.group(1).strip()) if match else ''
 
     return plot, thumb
@@ -1241,7 +1242,7 @@ def makeLatestCatalog(params):
         #for p in html:
             #f.write(str(p))
 
-    dataStartIndex = html.find('fourteen columns')
+    dataStartIndex = html.find( SITE_SETTINGS[ 'latest' ][ 'start' ] )
     if dataStartIndex == -1:
         raise Exception('Latest catalog scrape fail')
 
@@ -1254,7 +1255,7 @@ def makeLatestCatalog(params):
             'LATEST': tuple(
                 (match.group(1), match.group(3), "https:" + match.group(2))
                 for match in finditer(
-                    r'''<div class=\"img\">\s+?<a href=\"([^\"]+)\">\s+?<img class=\"hover-img1\" src=\"([^\"]+)\">\s+?</a>\s+?</div>\s+?<div class=\"recent-release-episodes\"><a href=\".*?\" rel=\"bookmark\">(.*?)</a''', html[dataStartIndex : html.find('</ul>', dataStartIndex)]
+                    SITE_SETTINGS[ 'latest' ][ 'regex' ], html[dataStartIndex : html.find( SITE_SETTINGS[ 'latest' ][ 'end' ], dataStartIndex )]
                 )
             )
         }
@@ -1262,7 +1263,7 @@ def makeLatestCatalog(params):
         return catalogFromIterable(
             (match.group(1), match.group(3), "https:" + match.group(2))
             for match in finditer(
-                r'''<div class=\"img\">\s+?<a href=\"([^\"]+)\">\s+?<img class=\"hover-img1\" src=\"([^\"]+)\">\s+?</a>\s+?</div>\s+?<div class=\"recent-release-episodes\"><a href=\".*?\" rel=\"bookmark\">(.*?)</a''', html[dataStartIndex : html.find('</ul>', dataStartIndex)]
+                SITE_SETTINGS[ 'latest' ][ 'regex' ], html[dataStartIndex : html.find( SITE_SETTINGS[ 'latest' ][ 'end' ], dataStartIndex )]
             )
         )
 
@@ -1271,14 +1272,14 @@ def makePopularCatalog(params):
     r = requestHelper(BASEURL) # We will scrape from the sidebar content on the homepage.
     html = r.text
 
-    dataStartIndex = html.find('"sidebar-titles"')
+    dataStartIndex = html.find( SITE_SETTINGS[ 'popular' ][ 'start' ] )
     if dataStartIndex == -1:
         raise Exception('Popular catalog scrape fail: ' + params['path'])
 
     return catalogFromIterable(
         match.groups()
         for match in finditer(
-            '''<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('</div>', dataStartIndex)]
+            SITE_SETTINGS[ 'popular' ][ 'regex' ], html[dataStartIndex : html.find( SITE_SETTINGS[ 'popular' ][ 'end' ], dataStartIndex )]
         )
     )
 
@@ -1288,15 +1289,15 @@ def makeSeriesSearchCatalog(params):
         BASEURL+'/search', data={'catara': params['query'], 'konuara': 'series'}, extraHeaders={'Referer': BASEURL+'/'})
     html = r.text
 
-    dataStartIndex = html.find('submit')
+    dataStartIndex = html.find( SITE_SETTINGS[ 'series_search' ][ 'start' ] )
     if dataStartIndex == -1:
         raise Exception('Series search scrape fail: ' + params['query'])
 
     return catalogFromIterable(
         match.groups()
         for match in finditer(
-            '''<a href="([^"]+)[^>]*>([^<]+)</a''',
-            html[dataStartIndex : html.find('cizgiyazisi', dataStartIndex)]
+            SITE_SETTINGS[ 'series_search' ][ 'regex' ],
+            html[dataStartIndex : html.find( SITE_SETTINGS[ 'series_search' ][ 'end' ] , dataStartIndex)]
         )
     )
 
@@ -1327,15 +1328,15 @@ def makeEpisodesSearchCatalog(params):
     )
     html = r.text
 
-    dataStartIndex = html.find('submit')
+    dataStartIndex = html.find( SITE_SETTINGS[ 'episode_search' ][ 'start' ] )
     if dataStartIndex == -1:
         raise Exception('Episode search scrape fail: ' + params['query'])
 
     return catalogFromIterable(
         match.groups()
         for match in finditer(
-            '''<a href="([^"]+)[^>]*>([^<]+)</a''',
-            html[dataStartIndex : html.find('cizgiyazisi', dataStartIndex)],
+            SITE_SETTINGS[ 'episode_search' ][ 'regex' ],
+            html[dataStartIndex : html.find( SITE_SETTINGS[ 'episode_search' ][ 'end' ] , dataStartIndex )],
             DOTALL
         )
     )
@@ -1357,14 +1358,20 @@ def makeGenericCatalog(params):
     r = requestHelper(BASEURL + params['path'])
     html = r.text
 
-    dataStartIndex = html.find('"ddmcc"')
+    dataStartIndex = html.find( SITE_SETTINGS[ 'catalog' ][ 'start' ] )
+
+    # have another attempt
+    if dataStartIndex == -1 and SITE_SETTINGS[ 'catalog' ][ 'start_alt' ] is not False:
+        dataStartIndex = html.find( SITE_SETTINGS[ 'catalog' ][ 'start_alt' ] )
+
     if dataStartIndex == -1:
         raise Exception('Generic catalog scrape fail: ' + params['path'])
 
     return catalogFromIterable(
         match.groups()
         for match in finditer(
-            '''<li(?:\sdata\-id=\"[0-9]+\")?>\s*<a href="([^"]+).*?>([^<]+)''', html[dataStartIndex : html.find('<script>', dataStartIndex)]
+            SITE_SETTINGS[ 'catalog' ][ 'regex' ],
+            html[dataStartIndex : html.find( SITE_SETTINGS[ 'catalog' ][ 'end' ], dataStartIndex )]
         )
     )
 
@@ -1402,6 +1409,15 @@ def getCatalogProperty(params):
         if not catalog:
             catalog = _rebuildCatalog()
     return catalog
+
+def get_page_parent(html):
+
+    stringStartIndex = html.find( SITE_SETTINGS[ 'parent' ][ 'start' ] )
+    match = re.search( SITE_SETTINGS[ 'parent' ][ 'regex' ], html[stringStartIndex:], DOTALL )
+    url = match.group(1).strip() if match else ''
+    name = unescapeHTMLText(match.group(2).strip()) if match else ''
+
+    return { 'name': name, 'url': url }
 
 def actionResolve(params):
 #Mod by Christian Haitian starts here
@@ -1818,17 +1834,10 @@ def actionResolve(params):
      embedURL = None
 
      # On rare cases an episode might have several "chapters", which are video players on the page.
-     embedURLPattern = b'onclick="myFunction'
-     embedURLIndex = content.find(embedURLPattern)
+
      if 'playChapters' in params or ADDON.getSetting('chapterEpisodes') == 'true':
-        # Multi-chapter episode found (that is, multiple embedURLPattern statements found).
-        # Extract all chapters from the page.
-        embedURLPatternLen = len(embedURLPattern)
-        currentPlayerIndex = embedURLIndex
-        dataIndices = [ ]
-        while currentPlayerIndex != -1:
-            dataIndices.append(currentPlayerIndex)
-            currentPlayerIndex = content.find(embedURLPattern, currentPlayerIndex + embedURLPatternLen)
+        # try and get chapters from site class
+        data_indices = compile( SITE_SETTINGS[ 'chapter' ][ 'regex' ], MULTILINE ).findall(content)
 
         # If more than one "embedURL" statement found, make a selection dialog and call them "chapters".
         if len(dataIndices) > 1:
@@ -1839,7 +1848,10 @@ def actionResolve(params):
             selectedIndex = 0
 
         if selectedIndex != -1:
-            embedURL = _decodeSource(content[dataIndices[selectedIndex]:])
+            embed_url = data_indices[selected_index]
+            # check site class if required to be decoded
+            if DECODE_SOURCE_REQUIRED:
+                embed_url = _decodeSource(embed_url)
         else:
             return # User cancelled the chapter selection.
      else:
@@ -2066,17 +2078,10 @@ def actionResolve(params):
 
 
     # On rare cases an episode might have several "chapters", which are video players on the page.
-    embedURLPattern = b'onclick="myFunction'
-    embedURLIndex = content.find(embedURLPattern)
+
     if 'playChapters' in params or ADDON.getSetting('chapterEpisodes') == 'true':
-        # Multi-chapter episode found (that is, multiple embedURLPattern statements found).
-        # Extract all chapters from the page.
-        embedURLPatternLen = len(embedURLPattern)
-        currentPlayerIndex = embedURLIndex
-        dataIndices = [ ]
-        while currentPlayerIndex != -1:
-            dataIndices.append(currentPlayerIndex)
-            currentPlayerIndex = content.find(embedURLPattern, currentPlayerIndex + embedURLPatternLen)
+        # try and get chapters from site class
+        dataIndices = compile( SITE_SETTINGS[ 'chapter' ][ 'regex' ], MULTILINE ).findall(content.decode('utf-8'))
 
         # If more than one "embedURL" statement found, make a selection dialog and call them "chapters".
         if len(dataIndices) > 1:
@@ -2087,10 +2092,15 @@ def actionResolve(params):
             selectedIndex = 0
 
         if selectedIndex != -1:
-            embedURL = _decodeSource(content[dataIndices[selectedIndex]:])
+            embedURL = dataIndices[selectedIndex]
+            # check site class if required to be decoded
+            if DECODE_SOURCE_REQUIRED:
+                embedURL = _decodeSource(embedURL)
         else:
             return # User cancelled the chapter selection.
     else:
+        embedURLPattern = b'onclick="myFunction'
+        embedURLIndex = content.find(embedURLPattern)
         # back-up search index
         if embedURLIndex <= 0:
             embedURLPattern = r'class="episode-descp"'
@@ -2103,7 +2113,7 @@ def actionResolve(params):
 
     # Handle temporary blocks / failures.
     if not embedURL:
-        if 'high volume of requests' in content:
+        if b'high volume of requests' in content:
             xbmcgui.Dialog().ok(
                 PLUGIN_TITLE + ' Fail (Server Response)',
                 '"We are getting extremely high volume of requests on our video servers so that we temporarily block for free videos for free users. I apologize for the inconvenience."'
