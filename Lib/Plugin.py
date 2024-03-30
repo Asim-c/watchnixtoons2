@@ -161,7 +161,7 @@ ADDON_TRAKT_ICON = 'special://home/addons/plugin.video.watchnixtoons2.kodi19/res
 ADDON_VIDEO_FANART = ADDON.getSetting('showVideoFanart') == 'true'
 
 # To let the source website know it's this plugin. Also used inside "makeLatestCatalog()" and "actionResolve()".
-WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+WNT2_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
 
 MEDIA_HEADERS = None # Initialized in 'actionResolve()'.
 
@@ -1618,17 +1618,20 @@ def actionResolve(params):
             raise Exception('Sources XMLHttpRequest request failed')
         jsonData = r3.json()
 
-        # Only two qualities are ever available: 480p ("SD") and 720p ("HD").
+        # Three qualities are ever available: 480p ("SD") / 720p ("HD") / 1080p ("FHD").
         sourceURLs = [ ]
         sdToken = jsonData.get('enc', '')
         hdToken = jsonData.get('hd', '')
+        fhdToken = jsonData.get('fhd', '')
         sourceBaseURL = jsonData.get('server', '') + '/getvid?evid='
         if sdToken:
             sourceURLs.append(('480 (SD)', sourceBaseURL + sdToken)) # Order the items as (LABEL, URL).
         if hdToken:
             sourceURLs.append(('720 (HD)', sourceBaseURL + hdToken))
+        if fhdToken:
+            sourceURLs.append(('1080 (FHD)', sourceBaseURL + fhdToken))
         # Use the same backup stream method as the source: cdn domain + SD stream.
-        backupURL = jsonData.get('cdn', '') + '/getvid?evid=' + (sdToken or hdToken)
+        backupURL = jsonData.get('cdn', '') + '/getvid?evid=' + (sdToken or hdToken or fhdToken)
      else:
         # Alternative video player page, with plain stream links in the JWPlayer javascript.
         sourcesBlock = search('sources:\s*?\[(.*?)\]', html, DOTALL).group(1)
@@ -1898,17 +1901,20 @@ def actionResolve(params):
             raise Exception('Sources XMLHttpRequest request failed')
         jsonData = r3.json()
 
-        # Only two qualities are ever available: 480p ("SD") and 720p ("HD").
+        # Three qualities are ever available: 480p ("SD") / 720p ("HD") / 1080p ("FHD").
         sourceURLs = [ ]
         sdToken = jsonData.get('enc', '')
         hdToken = jsonData.get('hd', '')
+        fhdToken = jsonData.get('fhd', '')
         sourceBaseURL = jsonData.get('server', '') + '/getvid?evid='
         if sdToken:
             sourceURLs.append(('480 (SD)', sourceBaseURL + sdToken)) # Order the items as (LABEL, URL).
         if hdToken:
             sourceURLs.append(('720 (HD)', sourceBaseURL + hdToken))
+        if fhdToken:
+            sourceURLs.append(('1080 (FHD)', sourceBaseURL + fhdToken))
         # Use the same backup stream method as the source: cdn domain + SD stream.
-        backupURL = jsonData.get('cdn', '') + '/getvid?evid=' + (sdToken or hdToken)
+        backupURL = jsonData.get('cdn', '') + '/getvid?evid=' + (sdToken or hdToken or fhdToken)
      else:
         # Alternative video player page, with plain stream links in the JWPlayer javascript.
         sourcesBlock = search('sources:\s*?\[(.*?)\]', html, DOTALL).group(1)
@@ -2149,17 +2155,20 @@ def actionResolve(params):
             raise Exception('Sources XMLHttpRequest request failed')
         jsonData = r3.json()
 
-        # Only two qualities are ever available: 480p ("SD") and 720p ("HD").
+        # Three qualities are ever available: 480p ("SD") / 720p ("HD") / 1080p ("FHD").
         sourceURLs = [ ]
         sdToken = jsonData.get('enc', '')
         hdToken = jsonData.get('hd', '')
+        fhdToken = jsonData.get('fhd', '')
         sourceBaseURL = jsonData.get('server', '') + '/getvid?evid='
         if sdToken:
             sourceURLs.append(('480 (SD)', sourceBaseURL + sdToken)) # Order the items as (LABEL, URL).
         if hdToken:
             sourceURLs.append(('720 (HD)', sourceBaseURL + hdToken))
+        if fhdToken:
+            sourceURLs.append(('1080 (FHD)', sourceBaseURL + fhdToken))
         # Use the same backup stream method as the source: cdn domain + SD stream.
-        backupURL = jsonData.get('cdn', '') + '/getvid?evid=' + (sdToken or hdToken)
+        backupURL = jsonData.get('cdn', '') + '/getvid?evid=' + (sdToken or hdToken or fhdToken)
     elif streamURL:
         sourceURLs = [ ]
         sourceURLs.append(('480 (SD)', streamURL))
